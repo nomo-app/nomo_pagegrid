@@ -90,6 +90,7 @@ class _NomoPageGridState extends State<NomoPageGrid> {
     columns: widget.columns,
     rows: widget.rows,
     initalItems: widget.items,
+    itemSize: widget.itemSize,
   );
 
   @override
@@ -137,6 +138,7 @@ class _NomoPageGridState extends State<NomoPageGrid> {
             itemCount: widget.rows * widget.columns * 3,
           ),
         ),
+        AnimationPreviewOverlay(pageGridNotifier: pageGridNotifier),
         Positioned(
           right: 0,
           width: 24,
@@ -387,12 +389,19 @@ class PageGridNotifier {
   final Map<int, Widget> initalItems;
 
   final double viewportWidth;
+  final double itemSize;
 
   int get childrenPerPage => rows * columns;
 
   final controller = ScrollController();
   final pageNotifier = ValueNotifier(0);
   final isDragging = ValueNotifier(false);
+
+  // Index of the item the user is currently hovering over.
+  final hoveredIndex = ValueNotifier<int?>(null);
+
+  // Map of {itemIndex: targetIndex} for items that need to animate.
+  final animationPreviewMap = ValueNotifier<Map<int, int>>({});
 
   final showRightPageScrollIndicator = ValueNotifier(false);
 
@@ -408,8 +417,10 @@ class PageGridNotifier {
     required this.initalItems,
     required this.rows,
     required this.columns,
+    required this.itemSize,
   }) {
     controller.addListener(onScrollPositionChanged);
+    hoveredIndex.addListener(_onHoverIndexChanged);
   }
 
   int maxPages = 3;
@@ -420,9 +431,71 @@ class PageGridNotifier {
   void dispose() {
     pageNotifier.dispose();
     isDragging.dispose();
+    hoveredIndex.dispose();
+    animationPreviewMap.dispose();
     controller
       ..removeListener(onScrollPositionChanged)
       ..dispose();
+  }
+
+  void _onHoverIndexChanged() {
+    final newHoverIndex = hoveredIndex.value;
+
+    if (newHoverIndex == null) {
+      animationPreviewMap.value = {};
+      return;
+    }
+
+    // This logic is a "dry run" of onItemReceive.
+    // It calculates the best push but only populates the animation map.
+    final pushDirections = [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+    ];
+    var possiblePushes = <({List<int> direction, List<int> chain})>[];
+
+    for (final direction in pushDirections) {
+      final chain = _getPushChain(newHoverIndex, direction);
+      if (chain != null && chain.isNotEmpty) {
+        possiblePushes.add((direction: direction, chain: chain));
+      }
+    }
+
+    if (possiblePushes.isEmpty) {
+      animationPreviewMap.value = {};
+      return;
+    }
+
+    possiblePushes.sort((a, b) => a.chain.length.compareTo(b.chain.length));
+    final bestPush = possiblePushes.first;
+    final direction = bestPush.direction;
+    final chain = bestPush.chain;
+    final page = newHoverIndex ~/ childrenPerPage;
+
+    final newAnimations = <int, int>{};
+    for (final indexToMove in chain) {
+      final targetIndex = _getIndexInDirection(indexToMove, direction, page);
+      if (targetIndex != -1) {
+        newAnimations[indexToMove] = targetIndex;
+      }
+    }
+    animationPreviewMap.value = newAnimations;
+  }
+
+  Offset getOffsetForIndex(int index) {
+    final page = index ~/ childrenPerPage;
+    final pageIndex = index % childrenPerPage;
+    final row = pageIndex ~/ columns;
+    final col = pageIndex % columns;
+
+    final pageOffset = page * viewportWidth;
+
+    return Offset(
+      pageOffset + (col * itemSize) - controller.offset,
+      row * itemSize,
+    );
   }
 
   void onScrollPositionChanged() {
@@ -491,8 +564,7 @@ class PageGridNotifier {
 
     // Place the dragged item in the newly freed spot.
     notifierMap[newPosition]!.value = draggedItem;
-    print(
-        "Pushed from $newPosition with chain of length ${chain.length} in direction $direction");
+    print("Pushed from $newPosition with chain of length ${chain.length} in direction $direction");
   }
 
   // Calculates the chain of items that would be pushed starting from an index.
@@ -598,5 +670,36 @@ class PageGridNotifier {
     }
     _enteredLeftSide = false;
     _enteredRightSide = false;
+  }
+}
+
+class AnimationPreviewOverlay extends StatelessWidget {
+  final PageGridNotifier pageGridNotifier;
+
+  const AnimationPreviewOverlay({super.key, required this.pageGridNotifier});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<Map<int, int>>(
+      valueListenable: pageGridNotifier.animationPreviewMap,
+      builder: (context, animationMap, _) {
+        return Stack(
+          children: [
+            for (final entry in animationMap.entries)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                left: pageGridNotifier.getOffsetForIndex(entry.value).dx,
+                top: pageGridNotifier.getOffsetForIndex(entry.value).dy,
+                child: SizedBox(
+                  width: pageGridNotifier.itemSize,
+                  height: pageGridNotifier.itemSize,
+                  child: pageGridNotifier.notifierMap[entry.key]!.value!,
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
