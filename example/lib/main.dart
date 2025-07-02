@@ -430,23 +430,126 @@ class PageGridNotifier {
     pageNotifier.value = page;
   }
 
-  void onPlaceHolderReceive(int placeholder, int oldPosition) {
+  void onPlaceHolderReceive(int newPosition, int oldPosition) {
+    // Handles dropping an item onto an empty cell.
     final itemChild = notifierMap[oldPosition]?.value;
     notifierMap[oldPosition]?.value = null;
-
-    notifierMap[placeholder]?.value = itemChild;
-
-    print("Placeholder: $placeholder received: $oldPosition");
+    notifierMap[newPosition]?.value = itemChild;
+    print("Moved from $oldPosition to empty spot $newPosition");
   }
 
   void onItemReceive(int newPosition, int oldPosition) {
-    final oldPosItem = notifierMap[oldPosition]?.value;
-    final newPosItem = notifierMap[newPosition]?.value;
+    if (newPosition == oldPosition) return;
 
-    notifierMap[oldPosition]?.value = newPosItem;
-    notifierMap[newPosition]?.value = oldPosItem;
+    final draggedItem = notifierMap[oldPosition]!.value!;
+    final itemAtNewPosition = notifierMap[newPosition]!.value;
 
-    print("newPosition: $newPosition received: $oldPosition");
+    final pushDirections = [
+      [0, 1], // Right
+      [0, -1], // Left
+      [1, 0], // Down
+      [-1, 0], // Up
+    ];
+
+    // Temporarily remove the dragged item from its original position.
+    notifierMap[oldPosition]!.value = null;
+
+    // Use a list of records with named fields for clarity.
+    var possiblePushes = <({List<int> direction, List<int> chain})>[];
+
+    for (final direction in pushDirections) {
+      final chain = _getPushChain(newPosition, direction);
+      if (chain != null && chain.isNotEmpty) {
+        // Add a named record to the list.
+        possiblePushes.add((direction: direction, chain: chain));
+      }
+    }
+
+    if (possiblePushes.isEmpty) {
+      // If no pushes are possible (item is "boxed in"), perform a swap.
+      notifierMap[oldPosition]!.value = itemAtNewPosition;
+      notifierMap[newPosition]!.value = draggedItem;
+      print("Swap occurred between $oldPosition and $newPosition");
+      return;
+    }
+
+    // Find the best push (the one with the shortest chain of items to move).
+    possiblePushes.sort((a, b) => a.chain.length.compareTo(b.chain.length));
+    final bestPush = possiblePushes.first;
+    final direction = bestPush.direction;
+    final chain = bestPush.chain;
+    final page = newPosition ~/ childrenPerPage;
+
+    // Execute the push by moving each item in the chain.
+    for (final indexToMove in chain.reversed) {
+      final item = notifierMap[indexToMove]!.value;
+      final targetIndex = _getIndexInDirection(indexToMove, direction, page);
+      if (targetIndex != -1) {
+        notifierMap[targetIndex]!.value = item;
+      }
+    }
+
+    // Place the dragged item in the newly freed spot.
+    notifierMap[newPosition]!.value = draggedItem;
+    print(
+        "Pushed from $newPosition with chain of length ${chain.length} in direction $direction");
+  }
+
+  // Calculates the chain of items that would be pushed starting from an index.
+  // Returns the list of indices in the chain, or null if a push is not possible.
+  List<int>? _getPushChain(int startIndex, List<int> direction) {
+    final page = startIndex ~/ childrenPerPage;
+    final chain = <int>[];
+    var currentIndex = startIndex;
+
+    while (true) {
+      final coords = _getCoords(currentIndex, page);
+      if (coords == null) return null; // Index is not on the current page.
+
+      if (notifierMap[currentIndex]?.value == null) {
+        // Found an empty spot, the push is possible.
+        break;
+      }
+
+      chain.add(currentIndex);
+
+      final nextIndex = _getIndexInDirection(currentIndex, direction, page);
+      if (nextIndex == -1) {
+        // Reached the edge of the grid, push is not possible in this direction.
+        return null;
+      }
+      currentIndex = nextIndex;
+    }
+    return chain;
+  }
+
+  // Helper to get (row, col) from an index on a given page.
+  List<int>? _getCoords(int index, int page) {
+    final int pageStartIndex = page * childrenPerPage;
+    if (index < pageStartIndex || index >= pageStartIndex + childrenPerPage) {
+      return null; // Not on this page
+    }
+    final pageIndex = index % childrenPerPage;
+    final row = pageIndex ~/ columns;
+    final col = pageIndex % columns;
+    return [row, col];
+  }
+
+  // Helper to get index in a direction. Returns -1 if out of bounds.
+  int _getIndexInDirection(int fromIndex, List<int> direction, int page) {
+    final coords = _getCoords(fromIndex, page);
+    if (coords == null) return -1;
+
+    final newRow = coords[0] + direction[0];
+    final newCol = coords[1] + direction[1];
+
+    // Check boundaries
+    if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= columns) {
+      return -1;
+    }
+
+    final pageStartIndex = page * childrenPerPage;
+    return pageStartIndex + newRow * columns + newCol;
   }
 
   void onChildDragUpdate(DragUpdateDetails dragUpdate) {
@@ -458,12 +561,12 @@ class PageGridNotifier {
       if (_enteredRightSide) return;
       _enteredRightSide = true;
       Future.delayed(
-        Duration(seconds: 1),
+        const Duration(seconds: 1),
         () {
           if (_enteredRightSide) {
             controller.animateTo(
               controller.offset + viewportWidth,
-              duration: Duration(milliseconds: 140),
+              duration: const Duration(milliseconds: 140),
               curve: Curves.fastOutSlowIn,
             );
           }
@@ -478,12 +581,12 @@ class PageGridNotifier {
       if (_enteredLeftSide) return;
       _enteredLeftSide = true;
       Future.delayed(
-        Duration(seconds: 1),
+        const Duration(seconds: 1),
         () {
           if (_enteredLeftSide) {
             controller.animateTo(
               controller.offset - viewportWidth,
-              duration: Duration(milliseconds: 140),
+              duration: const Duration(milliseconds: 140),
               curve: Curves.fastOutSlowIn,
             );
           }
