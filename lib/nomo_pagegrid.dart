@@ -1,39 +1,85 @@
 import 'dart:math';
-import 'dart:math' as math;
 import 'dart:ui';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/rendering/sliver.dart';
-import 'package:flutter/src/rendering/sliver_grid.dart';
+import 'package:flutter/rendering.dart';
 
-class NomoPageGrid extends StatefulWidget {
+class NomoPageGrid extends StatelessWidget {
   final int rows;
   final int columns;
-  final double itemSize;
-  final double maxWidth;
-
+  final Size itemSize;
+  final double? width;
+  final double? height;
+  final double wobbleAmount;
   final Map<int, Widget> items;
+  final void Function(Map<int, Widget> newItems)? onChanged;
 
   const NomoPageGrid({
     super.key,
     required this.rows,
     required this.columns,
     required this.itemSize,
-    required this.maxWidth,
     required this.items,
+    this.width,
+    this.height,
+    this.wobbleAmount = 3,
+    this.onChanged,
   });
 
   @override
-  State<NomoPageGrid> createState() => _NomoPageGridState();
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return _NomoPageGrid(
+          rows: rows,
+          columns: columns,
+          itemSize: itemSize,
+          items: items,
+          width: width ?? constraints.maxWidth,
+          height: height ?? constraints.maxHeight,
+          wobbleAmount: wobbleAmount,
+          onChanged: onChanged,
+        );
+      },
+    );
+  }
 }
 
-class _NomoPageGridState extends State<NomoPageGrid> {
+class _NomoPageGrid extends StatefulWidget {
+  final int rows;
+  final int columns;
+  final Size itemSize;
+  final double width;
+  final double height;
+  final double wobbleAmount;
+  final Map<int, Widget> items;
+  final void Function(Map<int, Widget> newItems)? onChanged;
+  _NomoPageGrid({
+    required this.rows,
+    required this.columns,
+    required this.itemSize,
+    required this.wobbleAmount,
+    required this.items,
+    required this.width,
+    required this.height,
+    required this.onChanged,
+  }) : assert(height.isFinite && !height.isNegative, ""),
+       assert(width.isFinite && !width.isNegative, "");
+
+  @override
+  State<_NomoPageGrid> createState() => _NomoPageGridState();
+}
+
+class _NomoPageGridState extends State<_NomoPageGrid> {
   late final PageGridNotifier pageGridNotifier = PageGridNotifier(
-    viewportWidth: widget.maxWidth,
+    viewportWidth: widget.width,
+    viewportHeight: widget.height,
     columns: widget.columns,
     rows: widget.rows,
     initalItems: widget.items,
+    itemSize: widget.itemSize,
+    wobbleAmount: widget.wobbleAmount,
+    onChanged: widget.onChanged,
   );
 
   @override
@@ -53,29 +99,33 @@ class _NomoPageGridState extends State<NomoPageGrid> {
               PointerDeviceKind.touch,
             },
           ),
-          child: GridView.builder(
-            physics: PageScrollPhysics(),
-            scrollDirection: Axis.horizontal,
-            controller: pageGridNotifier.controller,
-            gridDelegate: NomoPageGridDelegate(
-              rows: widget.rows,
-              columns: widget.columns,
-              itemSize: 64,
-            ),
-            dragStartBehavior: DragStartBehavior.down,
-            findChildIndexCallback: (key) {},
-            cacheExtent: widget.maxWidth * 3,
-            itemBuilder: (context, index) {
-              final item = widget.items[index];
+          child: ValueListenableBuilder(
+            valueListenable: pageGridNotifier.pageCountNotifier,
+            builder: (context, pageCount, child) {
+              return GridView.builder(
+                physics: PageScrollPhysics(),
+                scrollDirection: Axis.horizontal,
+                controller: pageGridNotifier.controller,
+                gridDelegate: NomoPageGridDelegate(
+                  rows: widget.rows,
+                  columns: widget.columns,
+                  itemSize: 64,
+                ),
+                dragStartBehavior: DragStartBehavior.down,
 
-              return PageGridItem(
-                index: index,
-                pageGridNotifier: pageGridNotifier,
-                child: item,
+                cacheExtent: widget.width * pageCount,
+                itemBuilder: (context, index) {
+                  final item = widget.items[index];
+
+                  return PageGridItem(
+                    index: index,
+                    pageGridNotifier: pageGridNotifier,
+                    child: item,
+                  );
+                },
+                itemCount: widget.rows * widget.columns * pageCount,
               );
             },
-            // semanticChildCount: rows * columns * 2,
-            itemCount: widget.rows * widget.columns * 3,
           ),
         ),
         Positioned(
@@ -227,7 +277,7 @@ class NomoPageGridDelegate extends SliverGridDelegate {
     return NomoPageGridLayout(
       rows: rows,
       columns: columns,
-      maxItemSize: 64,
+      maxItemSize: itemSize,
       crossAxisExtent: constraints.crossAxisExtent,
       mainAxisExtent: constraints.viewportMainAxisExtent,
     );
@@ -240,6 +290,108 @@ class NomoPageGridDelegate extends SliverGridDelegate {
         oldDelegate.itemSize != itemSize ||
         oldDelegate.mainAxisSpacing != mainAxisSpacing ||
         oldDelegate.crossAxisSpacing != crossAxisSpacing;
+  }
+}
+
+class InnerPageGridItem extends StatefulWidget {
+  final ItemPageSpot state;
+  final int index;
+  final PageGridNotifier pageGridNotifier;
+
+  const InnerPageGridItem(this.state, this.index, this.pageGridNotifier);
+
+  @override
+  State<InnerPageGridItem> createState() => _InnerPageGridItemState();
+}
+
+class _InnerPageGridItemState extends State<InnerPageGridItem> {
+  bool disableAnimation = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final child = _WobbleWidget(
+          wobbleAmount: widget.pageGridNotifier.wobbleAmount,
+          direction: switch (widget.state) {
+            EvadingPageSpot evading => evading.wobble ?? Offset.zero,
+
+            _ => Offset.zero,
+          },
+          child: AnimatedContainer(
+            duration: disableAnimation ? Duration.zero : const Duration(milliseconds: 200),
+            curve: Curves.ease,
+            transform: switch (widget.state) {
+              EvadingPageSpot evading => Matrix4.translationValues(
+                evading.dx * constraints.maxWidth,
+                evading.dy * constraints.maxHeight,
+                0,
+              ),
+              _ => Matrix4.translationValues(0, 0, 0),
+            },
+            child: widget.state.item,
+          ),
+        );
+
+        return DragTarget<int>(
+          onAcceptWithDetails: (details) {
+            disableAnimation = true;
+            widget.pageGridNotifier.onItemReceive(widget.index, details.data, details.offset);
+
+            Future.delayed(
+              Duration(milliseconds: 200),
+              () {
+                disableAnimation = false;
+              },
+            );
+          },
+          onMove: (details) {
+            if (widget.index == details.data) return;
+            widget.pageGridNotifier.calcPreviewDisplacement(
+              details.data,
+              widget.index,
+              details.offset,
+            );
+          },
+          onWillAcceptWithDetails: (details) {
+            return details.data != widget.index;
+          },
+          onLeave: (data) {
+            widget.pageGridNotifier.clearDisplacementPreview();
+          },
+          builder: (context, candidateData, rejectedData) {
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: widget.pageGridNotifier.itemSize.height,
+                  maxWidth: widget.pageGridNotifier.itemSize.width,
+                ),
+                child: LongPressDraggable(
+                  data: widget.index,
+                  onDragUpdate: widget.pageGridNotifier.onChildDragUpdate,
+                  onDragStarted: () {
+                    widget.pageGridNotifier.isDragging.value = true;
+                  },
+
+                  onDragEnd: (details) {
+                    widget.pageGridNotifier.dragEnded();
+                  },
+                  childWhenDragging: SizedBox.shrink(),
+                  feedback: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: widget.pageGridNotifier.itemSize.height,
+                      maxWidth: widget.pageGridNotifier.itemSize.width,
+                    ),
+                    child: child,
+                  ),
+                  child: child,
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }
 
@@ -256,233 +408,146 @@ class PageGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return ValueListenableBuilder(
-          valueListenable: pageGridNotifier.notifierMap[index]!,
-          builder: (context, itemChild, placeholer) {
-            if (itemChild == null) return placeholer!;
-            return DragTarget<int>(
-              onAcceptWithDetails: (details) => pageGridNotifier.onItemReceive(index, details.data),
-              onWillAcceptWithDetails: (details) {
-                if (details.data != index) {
-                  pageGridNotifier.previewDisplacement(details.data, index, details.offset);
-                }
-                return true;
-              },
-              onLeave: (data) {
-                pageGridNotifier.clearDisplacementPreview();
-              },
-              builder: (context, candidateData, rejectedData) {
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: 64, maxWidth: 64),
-                    child: LongPressDraggable<int>(
-                      data: index,
-                      onDragUpdate: pageGridNotifier.onChildDragUpdate,
-                      onDragStarted: () {
-                        pageGridNotifier.isDragging.value = true;
-                      },
-                      onDragEnd: (details) {
-                        pageGridNotifier.dragEnded();
-                      },
-                      feedback: ConstrainedBox(
-                        constraints: BoxConstraints(maxHeight: 64, maxWidth: 64),
-                        child: itemChild,
-                      ),
-                      childWhenDragging: SizedBox.shrink(),
-                      child: ValueListenableBuilder<Map<int, int>?>(
-                        valueListenable: pageGridNotifier.displacementPreview,
-                        builder: (context, displacement, __) {
-                          return ValueListenableBuilder<Set<int>>(
-                            valueListenable: pageGridNotifier.excludeFromAnimation,
-                            builder: (context, excludedPositions, __) {
-                              return ValueListenableBuilder<Set<int>>(
-                                valueListenable: pageGridNotifier.wobblingItems,
-                                builder: (context, wobblingItemIndices, __) {
-                                  Offset offset = Offset.zero;
-                                  Duration duration;
-                                  Widget child;
-
-                                  // Don't animate positions that are excluded (recently dropped items)
-                                  if (excludedPositions.contains(index)) {
-                                    duration = Duration.zero;
-                                  } else if (displacement == null) {
-                                    duration = const Duration(milliseconds: 200);
-                                  } else {
-                                    duration = const Duration(milliseconds: 100);
-                                  }
-
-                                  // Only apply displacement if this position isn't excluded
-                                  if (!excludedPositions.contains(index) &&
-                                      displacement != null &&
-                                      displacement.containsKey(index)) {
-                                    final newIndex = displacement[index]!;
-
-                                    final oldPage = index ~/ pageGridNotifier.childrenPerPage;
-                                    final newPage = newIndex ~/ pageGridNotifier.childrenPerPage;
-
-                                    if (oldPage == newPage) {
-                                      final oldCoords = pageGridNotifier.getCoords(index, oldPage);
-                                      final newCoords = pageGridNotifier.getCoords(
-                                        newIndex,
-                                        newPage,
-                                      );
-
-                                      if (oldCoords != null && newCoords != null) {
-                                        final itemWidth = constraints.maxWidth;
-                                        final itemHeight = constraints.maxHeight;
-
-                                        final deltaCol = newCoords[1] - oldCoords[1];
-                                        final deltaRow = newCoords[0] - oldCoords[0];
-                                        offset = Offset(
-                                          deltaCol * itemWidth,
-                                          deltaRow * itemHeight,
-                                        );
-                                      }
-                                    }
-                                  }
-
-                                  // Add wobble effect for displaced items
-                                  child = itemChild;
-                                  if (wobblingItemIndices.contains(index)) {
-                                    // Calculate wobble direction based on displacement
-                                    Offset wobbleDirection = Offset.zero;
-                                    if (displacement != null && displacement.containsKey(index)) {
-                                      final newIndex = displacement[index]!;
-                                      final oldPage = index ~/ pageGridNotifier.childrenPerPage;
-                                      final newPage = newIndex ~/ pageGridNotifier.childrenPerPage;
-
-                                      if (oldPage == newPage) {
-                                        final oldCoords = pageGridNotifier.getCoords(
-                                          index,
-                                          oldPage,
-                                        );
-                                        final newCoords = pageGridNotifier.getCoords(
-                                          newIndex,
-                                          newPage,
-                                        );
-
-                                        if (oldCoords != null && newCoords != null) {
-                                          final deltaCol = newCoords[1] - oldCoords[1];
-                                          final deltaRow = newCoords[0] - oldCoords[0];
-
-                                          // Normalize the direction
-                                          if (deltaCol != 0 || deltaRow != 0) {
-                                            final length = math.sqrt(
-                                              deltaCol * deltaCol + deltaRow * deltaRow,
-                                            );
-                                            wobbleDirection = Offset(
-                                              deltaCol / length,
-                                              deltaRow / length,
-                                            );
-                                          }
-                                        }
-                                      }
-                                    }
-
-                                    child = _WobbleWidget(
-                                      child: itemChild,
-                                      direction: wobbleDirection,
-                                    );
-                                  }
-
-                                  return AnimatedContainer(
-                                    duration: duration,
-                                    curve: Curves.ease,
-                                    transform: Matrix4.translationValues(offset.dx, offset.dy, 0),
-                                    child: child,
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-          child: DragTarget<int>(
-            onAcceptWithDetails: (details) =>
-                pageGridNotifier.onPlaceHolderReceive(index, details.data),
-            onWillAcceptWithDetails: (details) {
-              pageGridNotifier.clearDisplacementPreview();
-              return true;
-            },
-            builder: (context, candidateData, rejectedData) {
-              return Container(
-                child: switch (candidateData.isNotEmpty) {
-                  true => Center(
-                    key: ValueKey('placeholder $index $candidateData'),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: 64, maxWidth: 64),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.black12,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  false => SizedBox.shrink(
-                    //    key: ValueKey('empty $index'),
-                  ),
-                },
-              );
-            },
-          ),
-        );
+    return ValueListenableBuilder(
+      valueListenable: pageGridNotifier.notifierMap[index]!,
+      builder: (context, itemState, placeholer) {
+        return switch (itemState) {
+          EmptyPageSpot() => placeholer!,
+          ItemPageSpot itemState => InnerPageGridItem(itemState, index, pageGridNotifier),
+        };
       },
+      child: DragTarget<int>(
+        onAcceptWithDetails: (details) =>
+            pageGridNotifier.onPlaceHolderReceive(index, details.data),
+
+        onLeave: (data) {
+          // pageGridNotifier.clearDisplacementPreview();
+        },
+        builder: (context, candidateData, rejectedData) {
+          return Container(
+            child: switch (candidateData.isNotEmpty) {
+              true => Center(
+                key: ValueKey('placeholder $index $candidateData'),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: 64, maxWidth: 64),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.black12,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              false => SizedBox.shrink(),
+            },
+          );
+        },
+      ),
     );
   }
 }
 
-class PageGridNotifier {
+sealed class PageSpotState {
+  const PageSpotState();
+
+  Widget? get item => switch (this) {
+    EmptyPageSpot _ => null,
+    ItemPageSpot item => item.item,
+  };
+}
+
+final class EmptyPageSpot extends PageSpotState {}
+
+final class ItemPageSpot extends PageSpotState {
+  final Widget item;
+
+  const ItemPageSpot(this.item);
+}
+
+final class EvadingPageSpot extends ItemPageSpot {
+  final int dx;
+  final int dy;
+
+  final Offset? wobble;
+
+  const EvadingPageSpot(super.item, this.dx, this.dy, this.wobble);
+}
+
+enum PushDirection {
+  FromTop(0, 1),
+  FromLeft(-1, 0),
+  FromRight(1, 0),
+  FromBottom(0, -1);
+
+  final int x;
+  final int y;
+  const PushDirection(this.x, this.y);
+}
+
+typedef Position = ({int x, int y});
+
+final class PageGridNotifier {
   final int rows;
   final int columns;
   final Map<int, Widget> initalItems;
-
+  final Size itemSize;
   final double viewportWidth;
+  final double viewportHeight;
+  final double wobbleAmount;
 
   int get childrenPerPage => rows * columns;
+  double get targetWidth => viewportWidth / columns;
+  double get targetHeight => viewportHeight / rows;
 
   final controller = ScrollController();
   final pageNotifier = ValueNotifier(0);
   final isDragging = ValueNotifier(false);
-  // Removed lastDropTarget to fix flickering issue
-
   final showRightPageScrollIndicator = ValueNotifier(false);
 
-  final displacementPreview = ValueNotifier<Map<int, int>?>(null);
+  final void Function(Map<int, Widget> newItems)? onChanged;
 
-  // Track positions that should not animate (recently dropped items)
-  final excludeFromAnimation = ValueNotifier<Set<int>>({});
-  
-  // Track wobbling items for preview animation
-  final wobblingItems = ValueNotifier<Set<int>>({});
-  
+  late final ValueNotifier<int> pageCountNotifier;
+
   // Store the last push result from preview to ensure consistency with drop
   Map<int, int>? _lastPushResult;
+  final Set<int> _activeEvasionIndexes = {};
 
   late final notifierMap = {
     for (int i = 0; i < maxPages * childrenPerPage; i++)
-      i: ValueNotifier<Widget?>(
-        initalItems[i],
+      i: ValueNotifier<PageSpotState>(
+        switch (initalItems[i]) {
+          Widget item => ItemPageSpot(item),
+          _ => EmptyPageSpot(),
+        },
       ),
+  };
+
+  Map<int, Widget> get currentItems => {
+    for (final entry in notifierMap.entries)
+      if (entry.value.value.item != null) entry.key: entry.value.value.item!,
   };
 
   PageGridNotifier({
     required this.viewportWidth,
+    required this.viewportHeight,
     required this.initalItems,
     required this.rows,
     required this.columns,
+    required this.itemSize,
+    required this.wobbleAmount,
+    required this.onChanged,
   }) {
+    final maxIndex = initalItems.keys.reduce(
+      (value, element) {
+        return max(value, element);
+      },
+    );
+    final pages = (maxIndex / childrenPerPage).ceil();
+    pageCountNotifier = ValueNotifier(pages);
+
     controller.addListener(onScrollPositionChanged);
   }
 
@@ -491,11 +556,13 @@ class PageGridNotifier {
   bool _enteredRightSide = false;
   bool _enteredLeftSide = false;
 
+  void addPage() {
+    // TODO: addpage
+  }
+
   void dispose() {
     pageNotifier.dispose();
     isDragging.dispose();
-    excludeFromAnimation.dispose();
-    wobblingItems.dispose();
     controller
       ..removeListener(onScrollPositionChanged)
       ..dispose();
@@ -508,28 +575,36 @@ class PageGridNotifier {
 
   void onPlaceHolderReceive(int newPosition, int oldPosition) {
     // Handles dropping an item onto an empty cell.
-    final itemChild = notifierMap[oldPosition]?.value;
-    notifierMap[oldPosition]?.value = null;
-    notifierMap[newPosition]?.value = itemChild;
+    final itemState = notifierMap[oldPosition]?.value;
+
+    if (itemState == null || itemState is EmptyPageSpot) return;
+
+    notifierMap[oldPosition]?.value = EmptyPageSpot();
+    notifierMap[newPosition]?.value = itemState;
+    onItemsChanged();
   }
 
   void dragEnded() {
     isDragging.value = false;
     clearDisplacementPreview();
-    // Clear the exclusion list after a short delay to allow smooth completion
-    Future.delayed(const Duration(milliseconds: 250), () {
-      excludeFromAnimation.value = {};
-    });
   }
 
-  void onItemReceive(int newPosition, int oldPosition) {
+  void onItemsChanged() {
+    if (onChanged != null) onChanged!(currentItems);
+  }
+
+  void onItemReceive(int newPosition, int oldPosition, Offset offset) {
     if (newPosition == oldPosition) return;
 
-    final draggedItem = notifierMap[oldPosition]!.value!;
-    final itemAtNewPosition = notifierMap[newPosition]!.value;
-
     // Use the stored push result from preview to ensure consistency
-    final pushResult = _lastPushResult ?? _calculatePush(newPosition, oldPosition);
+
+    final pushResult =
+        _lastPushResult ??
+        _calculatePush(
+          newPosition,
+          oldPosition,
+          _calculateEvasionDirectionFromHover(offset, newPosition),
+        );
 
     if (pushResult == null) {
       return;
@@ -537,28 +612,27 @@ class PageGridNotifier {
 
     // Clear displacement preview immediately to prevent dragged item from animating
     clearDisplacementPreview();
-    
+
     // Clear the stored result as it's been used
     _lastPushResult = null;
 
-    // Mark the target position as excluded from animations
-    final currentExclusions = Set<int>.from(excludeFromAnimation.value);
-    currentExclusions.add(newPosition);
-    excludeFromAnimation.value = currentExclusions;
-
     // Handle swap
+    final draggedItem = notifierMap[oldPosition]!.value;
     if (pushResult.length == 2 &&
         pushResult[oldPosition] == newPosition &&
         pushResult[newPosition] == oldPosition) {
+      final itemAtNewPosition = notifierMap[newPosition]!.value;
       notifierMap[newPosition]!.value = draggedItem;
       notifierMap[oldPosition]!.value = itemAtNewPosition;
+      onItemsChanged();
       return;
     }
 
     // Handle push - this should match the preview exactly
-    final itemsToMove = <int, Widget?>{};  
+    final itemsToMove = <int, PageSpotState>{};
     for (final fromIndex in pushResult.keys) {
-      if (fromIndex != oldPosition) { // Don't store the dragged item
+      if (fromIndex != oldPosition) {
+        // Don't store the dragged item
         itemsToMove[fromIndex] = notifierMap[fromIndex]!.value;
       }
     }
@@ -567,149 +641,181 @@ class PageGridNotifier {
     for (final entry in pushResult.entries) {
       final fromIndex = entry.key;
       final toIndex = entry.value;
-      if (fromIndex != oldPosition) { // Don't move the dragged item yet
-        notifierMap[toIndex]!.value = itemsToMove[fromIndex];
+      if (fromIndex != oldPosition) {
+        // Don't move the dragged item yet
+        notifierMap[toIndex]!.value = itemsToMove[fromIndex]!;
       }
     }
 
     // Place the dragged item at target position
     notifierMap[newPosition]!.value = draggedItem;
-    
+
     // Clear the old position if it's not being used by another item
     if (!pushResult.containsValue(oldPosition)) {
-      notifierMap[oldPosition]!.value = null;
+      notifierMap[oldPosition]!.value = EmptyPageSpot();
+    }
+
+    onItemsChanged();
+  }
+
+  // Used for debouncing animation of Displacement
+  BigInt activeDisplacementCount = BigInt.zero;
+  int? activeDisplacementTarget;
+  // Used for debouncing calc of Displacement
+  PushDirection? activePushDirection;
+
+  void previewDisplacement(Map<int, int> pushResult, int targetIndex) async {
+    activeDisplacementCount += BigInt.one;
+    final saved = activeDisplacementCount;
+
+    await Future.delayed(Duration(milliseconds: 200));
+    if (saved != activeDisplacementCount) return;
+    if (activeDisplacementTarget != targetIndex) return;
+
+    /// Clear Spots not in path
+    final toClear = _activeEvasionIndexes.difference(pushResult.keys.toSet());
+    for (final index in toClear) {
+      final value = notifierMap[index]!.value;
+      if (value is EvadingPageSpot) {
+        notifierMap[index]!.value = ItemPageSpot(value.item);
+      }
+    }
+    _activeEvasionIndexes.clear();
+    _activeEvasionIndexes.addAll(pushResult.keys);
+
+    for (final entry in pushResult.entries) {
+      final index = entry.key;
+      final newIndex = entry.value;
+      final oldPage = index ~/ childrenPerPage;
+      final newPage = newIndex ~/ childrenPerPage;
+      assert(oldPage == newPage);
+      final oldCoords = getCoords(index, oldPage);
+      final newCoords = getCoords(newIndex, newPage);
+      final deltaCol = newCoords.x - oldCoords.x;
+      final deltaRow = newCoords.y - oldCoords.y;
+      Offset? wobbleDirection;
+      // Normalize the direction
+      if (deltaCol != 0 || deltaRow != 0) {
+        final length = sqrt(
+          deltaCol * deltaCol + deltaRow * deltaRow,
+        );
+        wobbleDirection = Offset(
+          deltaCol / length,
+          deltaRow / length,
+        );
+      }
+
+      final notifier = notifierMap[index]!;
+      notifier.value = EvadingPageSpot(
+        (notifier.value as ItemPageSpot).item,
+        deltaCol,
+        deltaRow,
+        wobbleDirection,
+      );
     }
   }
 
-  void previewDisplacement(int draggedIndex, int targetIndex, Offset hoverOffset) {
-    final pushResult = _calculatePushWithEvasion(targetIndex, draggedIndex, hoverOffset);
+  void calcPreviewDisplacement(int draggedIndex, int targetIndex, Offset hoverOffset) {
+    final direction = _calculateEvasionDirectionFromHover(hoverOffset, targetIndex);
+    if (direction == activePushDirection && targetIndex == activeDisplacementTarget) return;
+
+    activePushDirection = direction;
+
+    final pushResult = _calculatePush(targetIndex, draggedIndex, direction);
     if (pushResult != null) {
+      activeDisplacementTarget = targetIndex;
       pushResult.remove(draggedIndex);
-      
       // Store the push result for consistency during actual drop
       _lastPushResult = Map<int, int>.from(pushResult);
-      _lastPushResult![draggedIndex] = targetIndex; // Re-add the dragged item mapping
-      
-      displacementPreview.value = pushResult;
-      
-      // Set wobbling items
-      wobblingItems.value = pushResult.keys.toSet();
+      _lastPushResult![draggedIndex] = targetIndex; // Re-add the dragged item
+
+      previewDisplacement(pushResult, targetIndex);
     }
   }
 
   void clearDisplacementPreview() {
-    displacementPreview.value = null;
-    wobblingItems.value = {};
-  }
+    print("Cleared");
+    activeDisplacementCount = BigInt.zero;
+    activeDisplacementTarget = null;
+    activePushDirection = null;
 
-  Map<int, int>? _calculatePushWithEvasion(int newPosition, int oldPosition, Offset hoverOffset) {
-    final itemAtNewPosition = notifierMap[newPosition]!.value;
-
-    // Case 1: Dropping on an empty spot, no push needed.
-    if (itemAtNewPosition == null) {
-      return {oldPosition: newPosition};
-    }
-
-    // Calculate evasion direction based on hover position on target
-    final evasionDirection = _calculateEvasionDirectionFromHover(hoverOffset);
-
-    // Case 2: Try evasion first if we have a preferred direction
-    if (evasionDirection != null) {
-      final evasionChain = _getPushChain(newPosition, evasionDirection);
-      if (evasionChain != null) {
-        // Evasion is possible, use it
-        final page = newPosition ~/ childrenPerPage;
-        final pushResult = <int, int>{};
-        for (final indexToMove in evasionChain.reversed) {
-          final targetIndex = _getIndexInDirection(indexToMove, evasionDirection, page);
-          if (targetIndex != -1) {
-            pushResult[indexToMove] = targetIndex;
-          }
-        }
-        pushResult[oldPosition] = newPosition;
-        return pushResult;
+    for (final index in _activeEvasionIndexes) {
+      final value = notifierMap[index]!.value;
+      if (value is EvadingPageSpot) {
+        notifierMap[index]!.value = ItemPageSpot(value.item);
       }
     }
-
-    // Case 3: Fallback to original push logic if evasion fails
-    return _calculatePush(newPosition, oldPosition);
+    _activeEvasionIndexes.clear();
   }
 
-  List<int>? _calculateEvasionDirectionFromHover(Offset hoverOffset) {
-    // hoverOffset is relative to the target widget (0,0 is top-left, 64,64 is bottom-right)
-    const itemSize = 64.0; // Standard item size
+  PushDirection _calculateEvasionDirectionFromHover(Offset hoverOffset, int index) {
+    hoverOffset = hoverOffset.translate(itemSize.width / 2, itemSize.height / 2);
 
-    // Calculate which side of the item we're hovering over
-    final relativeX = hoverOffset.dx / itemSize; // 0.0 = left edge, 1.0 = right edge
-    final relativeY = hoverOffset.dy / itemSize; // 0.0 = top edge, 1.0 = bottom edge
+    final page = index ~/ childrenPerPage;
 
-    // Determine distances to each edge
-    final distanceToLeft = relativeX;
-    final distanceToRight = 1.0 - relativeX;
-    final distanceToTop = relativeY;
-    final distanceToBottom = 1.0 - relativeY;
-
-    // Find the closest edge and evade in the opposite direction
-    final minDistance = math.min(
-      math.min(distanceToLeft, distanceToRight),
-      math.min(distanceToTop, distanceToBottom),
+    final position = getCoords(index, page);
+    final offset = Offset(
+      position.x * targetWidth + targetWidth / 2,
+      position.y * targetHeight + targetHeight / 2,
     );
 
-    if (minDistance == distanceToLeft) {
-      // Hovering over left side, evade left
-      return [0, -1]; // Left
-    } else if (minDistance == distanceToRight) {
-      // Hovering over right side, evade right
-      return [0, 1]; // Right
-    } else if (minDistance == distanceToTop) {
-      // Hovering over top side, evade up
-      return [-1, 0]; // Up
-    } else if (minDistance == distanceToBottom) {
-      // Hovering over bottom side, evade down
-      return [1, 0]; // Down
+    // Calculate which side of the item we're hovering over
+    final relativeX = offset.dx - hoverOffset.dx;
+    final relativeY = offset.dy - hoverOffset.dy;
+
+    if (relativeX.abs() > relativeY.abs()) {
+      if (relativeX < 0) return PushDirection.FromLeft;
+      if (relativeX > 0) return PushDirection.FromRight;
+    } else {
+      if (relativeY > 0) return PushDirection.FromTop;
+      if (relativeY < 0) return PushDirection.FromBottom;
     }
 
-    return null; // Fallback
+    return PushDirection.FromLeft;
   }
 
-  Map<int, int>? _calculatePush(int newPosition, int oldPosition) {
+  Map<int, int>? _calculatePush(
+    int newPosition,
+    int oldPosition,
+    PushDirection preferedDirection,
+  ) {
     final itemAtNewPosition = notifierMap[newPosition]!.value;
 
     // Case 1: Dropping on an empty spot, no push needed.
-    if (itemAtNewPosition == null) {
+    if (itemAtNewPosition is EmptyPageSpot) {
       return {oldPosition: newPosition};
     }
 
-    // Case 2: Pushing items
-    final pushDirections = [
-      [0, 1], // Right
-      [0, -1], // Left
-      [1, 0], // Down
-      [-1, 0], // Up
-    ];
+    var bestPush = _getPushChain(newPosition, oldPosition, preferedDirection);
+    var direction = preferedDirection;
 
-    var possiblePushes = <({List<int> direction, List<int> chain})>[];
+    if (bestPush == null) {
+      var possiblePushes = <({PushDirection direction, List<int> chain})>[];
 
-    for (final direction in pushDirections) {
-      final chain = _getPushChain(newPosition, direction);
-      if (chain != null) {
-        possiblePushes.add((direction: direction, chain: chain));
+      for (final direction in PushDirection.values) {
+        final chain = _getPushChain(newPosition, oldPosition, direction);
+        if (chain != null) {
+          possiblePushes.add((direction: direction, chain: chain));
+        }
+      }
+
+      if (possiblePushes.isNotEmpty) {
+        possiblePushes.sort((a, b) => a.chain.length.compareTo(b.chain.length));
+
+        bestPush = possiblePushes.first.chain;
+        direction = possiblePushes.first.direction;
       }
     }
 
-    if (possiblePushes.isEmpty) {
-      // Case 3: No valid push found, perform a swap.
+    // If still no Push is found we swap
+    if (bestPush == null) {
       return {oldPosition: newPosition, newPosition: oldPosition};
     }
 
-    possiblePushes.sort((a, b) => a.chain.length.compareTo(b.chain.length));
-    final bestPush = possiblePushes.first;
-    final direction = bestPush.direction;
-    final chain = bestPush.chain;
     final page = newPosition ~/ childrenPerPage;
 
     final pushResult = <int, int>{};
-    for (final indexToMove in chain.reversed) {
+    for (final indexToMove in bestPush.reversed) {
       final targetIndex = _getIndexInDirection(indexToMove, direction, page);
       if (targetIndex != -1) {
         pushResult[indexToMove] = targetIndex;
@@ -720,13 +826,14 @@ class PageGridNotifier {
     return pushResult;
   }
 
-  List<int>? _getPushChain(int startIndex, List<int> direction) {
+  List<int>? _getPushChain(int startIndex, int draggedIndex, PushDirection direction) {
     final page = startIndex ~/ childrenPerPage;
     final chain = <int>[];
     var currentIndex = startIndex;
 
     while (true) {
-      if (notifierMap[currentIndex]?.value == null) {
+      final val = notifierMap[currentIndex]?.value;
+      if (val is EmptyPageSpot || currentIndex == draggedIndex) {
         // Found an empty spot, the push is possible.
         break;
       }
@@ -743,23 +850,22 @@ class PageGridNotifier {
     return chain;
   }
 
-  List<int>? getCoords(int index, int page) {
+  Position getCoords(int index, int page) {
     final int pageStartIndex = page * childrenPerPage;
     if (index < pageStartIndex || index >= pageStartIndex + childrenPerPage) {
-      return null; // Not on this page
+      throw UnimplementedError();
     }
     final pageIndex = index % childrenPerPage;
     final row = pageIndex ~/ columns;
     final col = pageIndex % columns;
-    return [row, col];
+    return (x: col, y: row);
   }
 
-  int _getIndexInDirection(int fromIndex, List<int> direction, int page) {
+  int _getIndexInDirection(int fromIndex, PushDirection direction, int page) {
     final coords = getCoords(fromIndex, page);
-    if (coords == null) return -1;
 
-    final newRow = coords[0] + direction[0];
-    final newCol = coords[1] + direction[1];
+    final newRow = coords.y + direction.y;
+    final newCol = coords.x + direction.x;
 
     if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= columns) {
       return -1;
@@ -816,9 +922,11 @@ class PageGridNotifier {
 class _WobbleWidget extends StatefulWidget {
   final Widget child;
   final Offset direction;
+  final double wobbleAmount;
 
   const _WobbleWidget({
     required this.child,
+    required this.wobbleAmount,
     this.direction = Offset.zero,
   });
 
@@ -864,15 +972,15 @@ class _WobbleWidgetState extends State<_WobbleWidget> with SingleTickerProviderS
       animation: _animation,
       builder: (context, child) {
         // Create smooth back-and-forth motion in displacement direction
-        final wobbleAmount = 3.0; // Pixels to move back and forth
-        final offsetX = widget.direction.dx * _animation.value * wobbleAmount;
-        final offsetY = widget.direction.dy * _animation.value * wobbleAmount;
+        final offsetX = widget.direction.dx * _animation.value * widget.wobbleAmount;
+        final offsetY = widget.direction.dy * _animation.value * widget.wobbleAmount;
 
         return Transform.translate(
           offset: Offset(offsetX, offsetY),
-          child: widget.child,
+          child: child,
         );
       },
+      child: widget.child,
     );
   }
 }
