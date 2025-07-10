@@ -530,8 +530,6 @@ class InnerPageGridItem extends StatefulWidget {
 }
 
 class _InnerPageGridItemState extends State<InnerPageGridItem> {
-  bool disableAnimation = false;
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -544,7 +542,7 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
             _ => Offset.zero,
           },
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: widget.state.isDropping ? Duration.zero : const Duration(milliseconds: 200),
             curve: Curves.ease,
             transform: switch (widget.state) {
               EvadingPageSpot evading => Matrix4.translationValues(
@@ -560,8 +558,6 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
 
         return DragTarget<int>(
           onAcceptWithDetails: (details) {
-            disableAnimation = true;
-
             // Convert global offset to local coordinates for consistency
             Offset localOffset = details.offset;
 
@@ -572,13 +568,6 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
             }
 
             widget.pageGridNotifier.onItemReceive(widget.index, details.data, localOffset);
-
-            Future.delayed(
-              Duration(milliseconds: 200),
-              () {
-                disableAnimation = false;
-              },
-            );
           },
           onMove: (details) {
             if (widget.index == details.data) return;
@@ -716,8 +705,9 @@ final class EmptyPageSpot extends PageSpotState {}
 
 final class ItemPageSpot extends PageSpotState {
   final Widget item;
+  final bool isDropping;
 
-  const ItemPageSpot(this.item);
+  const ItemPageSpot(this.item, {this.isDropping = false});
 }
 
 final class EvadingPageSpot extends ItemPageSpot {
@@ -726,7 +716,7 @@ final class EvadingPageSpot extends ItemPageSpot {
 
   final Offset? wobble;
 
-  const EvadingPageSpot(super.item, this.dx, this.dy, this.wobble);
+  const EvadingPageSpot(super.item, this.dx, this.dy, this.wobble, {super.isDropping = false});
 }
 
 enum PushDirection {
@@ -875,9 +865,29 @@ final class PageGridNotifier {
         pushResult[oldPosition] == newPosition &&
         pushResult[newPosition] == oldPosition) {
       final itemAtNewPosition = notifierMap[newPosition]!.value;
-      notifierMap[newPosition]!.value = draggedItem;
-      notifierMap[oldPosition]!.value = itemAtNewPosition;
+
+      // Mark both items as dropping to prevent animation
+      if (draggedItem is ItemPageSpot) {
+        notifierMap[newPosition]!.value = ItemPageSpot(draggedItem.item, isDropping: true);
+      }
+      if (itemAtNewPosition is ItemPageSpot) {
+        notifierMap[oldPosition]!.value = ItemPageSpot(itemAtNewPosition.item, isDropping: true);
+      }
+
       onItemsChanged();
+
+      // Clear isDropping flag after animation duration
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (notifierMap[newPosition]!.value is ItemPageSpot) {
+          final item = notifierMap[newPosition]!.value as ItemPageSpot;
+          notifierMap[newPosition]!.value = ItemPageSpot(item.item, isDropping: false);
+        }
+        if (notifierMap[oldPosition]!.value is ItemPageSpot) {
+          final item = notifierMap[oldPosition]!.value as ItemPageSpot;
+          notifierMap[oldPosition]!.value = ItemPageSpot(item.item, isDropping: false);
+        }
+      });
+
       return;
     }
 
@@ -890,18 +900,32 @@ final class PageGridNotifier {
       }
     }
 
-    // Apply moves in the correct order
+    // Track all affected indices for clearing isDropping flag later
+    final affectedIndices = <int>{};
+
+    // Apply moves in the correct order with isDropping flag
     for (final entry in pushResult.entries) {
       final fromIndex = entry.key;
       final toIndex = entry.value;
       if (fromIndex != oldPosition) {
         // Don't move the dragged item yet
-        notifierMap[toIndex]!.value = itemsToMove[fromIndex]!;
+        final itemToMove = itemsToMove[fromIndex]!;
+        if (itemToMove is ItemPageSpot) {
+          notifierMap[toIndex]!.value = ItemPageSpot(itemToMove.item, isDropping: true);
+          affectedIndices.add(toIndex);
+        } else {
+          notifierMap[toIndex]!.value = itemToMove;
+        }
       }
     }
 
-    // Place the dragged item at target position
-    notifierMap[newPosition]!.value = draggedItem;
+    // Place the dragged item at target position with isDropping flag
+    if (draggedItem is ItemPageSpot) {
+      notifierMap[newPosition]!.value = ItemPageSpot(draggedItem.item, isDropping: true);
+      affectedIndices.add(newPosition);
+    } else {
+      notifierMap[newPosition]!.value = draggedItem;
+    }
 
     // Clear the old position if it's not being used by another item
     if (!pushResult.containsValue(oldPosition)) {
@@ -909,6 +933,18 @@ final class PageGridNotifier {
     }
 
     onItemsChanged();
+
+    // Clear isDropping flag after animation duration
+    if (affectedIndices.isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        for (final index in affectedIndices) {
+          if (notifierMap[index]!.value is ItemPageSpot) {
+            final item = notifierMap[index]!.value as ItemPageSpot;
+            notifierMap[index]!.value = ItemPageSpot(item.item, isDropping: false);
+          }
+        }
+      });
+    }
   }
 
   // Used for debouncing animation of Displacement
