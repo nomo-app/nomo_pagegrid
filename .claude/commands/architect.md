@@ -31,39 +31,42 @@ Follow these steps to create a comprehensive architectural design:
    - Testing strategy
    - Error handling approach
 
-6. **Create Feature Branch**
-   - Generate appropriate branch name (e.g., feature/component-name)
-   - Use `git checkout -b` to create the branch
-   - Create an initial Commit before creating the Pull Request
-   - Push the branch to origin
-
-7. **Create Pull Request**
-   - Use `gh pr create` with comprehensive PR description
+6. **Create GitHub Issue**
+   - Use `gh issue create` to create a new issue with the feature specification
    - Include all architectural decisions and rationale
-   - Add task checklist for implementation
-   - Include test plan
-   - Note the PR number for worktree creation
-   - Switch back to master branch 
+   - Add implementation tasks as a checklist
+   - Include test plan and acceptance criteria
+   - Note the issue number for reference
+
+7. **Create Feature Branch**
+   - Generate appropriate branch name (e.g., feature/component-name)
+   - Create the branch without checking it out:
+     ```bash
+     git branch feature/component-name
+     ```
+   - Push the branch to origin:
+     ```bash
+     git push -u origin feature/component-name
+     ```
 
 8. **Create Git Worktree**
-   - Ensure on master branch
-   - Extract PR number from the created PR
+   - Extract issue number from the created issue
    - Create a worktree for isolated development:
      ```bash
-     git worktree add ./features/$(basename $(pwd))-pr-<PR_NUMBER> <BRANCH_NAME>
+     git worktree add ./features/$(basename $(pwd))-issue-<ISSUE_NUMBER> feature/component-name
      ```
    - Inform user about the worktree location
    - Suggest launching Claude in the worktree:
      ```bash
-     cd ./features/$(basename $(pwd))-pr-<PR_NUMBER> && claude
+     cd ./features/$(basename $(pwd))-issue-<ISSUE_NUMBER> && claude
      ```
 
-9.  **Documentation**
+9. **Documentation**
    - Update CLAUDE.md if needed for future reference
    - Consider if README updates are needed
    - Document any new patterns introduced
 
-The PR should include:
+The issue should include:
 - **Summary**: Clear description of what's being built and why
 - **Architecture Overview**: High-level design with components
 - **Technical Design**: Detailed implementation approach
@@ -71,7 +74,7 @@ The PR should include:
 - **Data Flow**: How data moves through the system
 - **Tasks Checklist**: Broken down implementation steps
 - **Testing Strategy**: How to verify the implementation
-- **Timeline**: Estimated schedule for completion
+- **Acceptance Criteria**: How to know when the feature is complete
 
 Remember to:
 - Keep designs modular and maintainable
@@ -83,17 +86,18 @@ Remember to:
 Final Output:
 ```
 ✓ Feature specification created
+✓ Issue created: #456
 ✓ Branch created: feature/component-name
-✓ Pull request created: #123
-✓ Worktree created at: ./features/project-pr-123
+✓ Branch pushed to origin
+✓ Worktree created at: ./features/project-issue-456
 
 Next steps:
 1. Launch Claude in the worktree:
-   cd ./features/project-pr-123 && claude
+   cd ./features/project-issue-456 && claude
 
 2. In the new Claude session, run:
-   /implement https://github.com/owner/repo/pull/123
+   /implement #456
 
 3. When done, clean up the worktree:
-   git worktree remove ./features/project-pr-123
+   git worktree remove ./features/project-issue-456
 ```
