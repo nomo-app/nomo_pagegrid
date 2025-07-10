@@ -18,7 +18,10 @@
       "Bash(flutter pub:*)",
       "Bash(flutter test:*)",
       "Bash(flutter format:*)",
-      "Bash(dart format:*)"
+      "Bash(dart format:*)",
+      "Bash(gh issue create:*)",
+      "Bash(git branch:*)",
+      "Bash(git restore:*)"
     ],
     "deny": []
   }
