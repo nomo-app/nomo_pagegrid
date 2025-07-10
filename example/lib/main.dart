@@ -132,15 +132,15 @@ class _NormalGridScreenState extends State<NormalGridScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('Normal NomoPageGrid'),
-      // ),
+      appBar: AppBar(
+        title: const Text('Normal NomoPageGrid'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: NomoPageGrid(
           rows: 4,
           columns: 4,
-          itemSize: const Size(64, 64),
+          itemSize: const Size(80, 80),
           wobbleAmount: 3,
           onChanged: (newItems) {
             setState(() {
@@ -177,11 +177,11 @@ class _SliverGridScreenState extends State<SliverGridScreen> {
       1: _buildItem(Colors.yellow, '1'),
       2: _buildItem(Colors.deepOrange, '2'),
       3: _buildItem(Colors.blue, '3'),
-      4: _buildItem(Colors.cyan, '4'),
-      5: _buildItem(Colors.green, '5'),
-      6: _buildItem(Colors.greenAccent, '6'),
-      7: _buildItem(Colors.deepPurple, '7'),
-      8: _buildItem(Colors.blueAccent, '8'),
+      // 4: _buildItem(Colors.cyan, '4'),
+      // 5: _buildItem(Colors.green, '5'),
+      // 6: _buildItem(Colors.greenAccent, '6'),
+      // 7: _buildItem(Colors.deepPurple, '7'),
+      // 8: _buildItem(Colors.blueAccent, '8'),
       9: _buildItem(Colors.pink, '9'),
       10: _buildItem(Colors.amber, '10'),
       11: _buildItem(Colors.teal, '11'),
