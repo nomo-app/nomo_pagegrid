@@ -9,7 +9,9 @@
       "Bash(git fetch:*)",
       "Bash(mkdir:*)",
       "Bash(git worktree:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
