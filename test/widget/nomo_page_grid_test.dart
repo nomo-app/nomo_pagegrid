@@ -38,7 +38,11 @@ void main() {
       );
 
       expect(find.byType(NomoPageGrid), findsOneWidget);
-      expect(find.byType(Container), findsNothing);
+      // Check that no test items are rendered
+      expect(find.text('0'), findsNothing);
+      expect(find.text('1'), findsNothing);
+      expect(find.text('2'), findsNothing);
+      expect(find.text('3'), findsNothing);
     });
 
     testWidgets('handles grid with gaps correctly', (tester) async {
@@ -237,6 +241,77 @@ void main() {
         expect(positions[2]!.dx, equals(positions[0]!.dx));
         expect(positions[2]!.dy > positions[0]!.dy, isTrue);
       }
+    });
+
+    testWidgets('works in Column with unbounded height', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                const Text('Header'),
+                NomoPageGrid(
+                  rows: 2,
+                  columns: 3,
+                  itemSize: const Size(80, 80),
+                  items: createTestItems(6),
+                ),
+                const Text('Footer'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(NomoPageGrid), findsOneWidget);
+      expect(find.text('Header'), findsOneWidget);
+      expect(find.text('Footer'), findsOneWidget);
+      
+      // Verify all items are rendered
+      for (int i = 0; i < 6; i++) {
+        expect(find.text('$i'), findsOneWidget);
+      }
+    });
+
+    testWidgets('calculates height with spacing correctly', (tester) async {
+      const itemSize = Size(100, 100);
+      const rows = 3;
+      const columns = 2;
+      const mainAxisSpacing = 10.0;
+      const crossAxisSpacing = 20.0;
+      
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                NomoPageGrid(
+                  rows: rows,
+                  columns: columns,
+                  itemSize: itemSize,
+                  mainAxisSpacing: mainAxisSpacing,
+                  crossAxisSpacing: crossAxisSpacing,
+                  items: createTestItems(6),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Calculate expected height: rows * itemHeight + (rows - 1) * crossAxisSpacing
+      final expectedHeight = rows * itemSize.height + (rows - 1) * crossAxisSpacing;
+      
+      // Find the ConstrainedBox that contains our calculated height
+      final constrainedBox = tester.widget<ConstrainedBox>(
+        find.descendant(
+          of: find.byType(NomoPageGrid),
+          matching: find.byType(ConstrainedBox),
+        ).first,
+      );
+      
+      expect(constrainedBox.constraints.minHeight, equals(expectedHeight));
+      expect(constrainedBox.constraints.maxHeight, equals(expectedHeight));
     });
   });
 }

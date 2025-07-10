@@ -67,22 +67,24 @@ class _SimpleGridExampleState extends State<SimpleGridExample> {
                 style: TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 24),
-              NomoPageGrid(
-                rows: 3,
-                columns: 3,
-                itemSize: const Size(100, 100),
-                items: items,
-                onChanged: (newItems) {
-                  setState(() {
-                    items = newItems;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Items reordered!'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
+              Expanded(
+                child: NomoPageGrid(
+                  rows: 3,
+                  columns: 3,
+                  itemSize: const Size(100, 100),
+                  items: items,
+                  onChanged: (newItems) {
+                    setState(() {
+                      items = newItems;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Items reordered!'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),

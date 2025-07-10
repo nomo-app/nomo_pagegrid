@@ -101,7 +101,15 @@ class NomoPageGrid extends StatelessWidget {
   /// Optional fixed height for the grid.
   ///
   /// If not specified, the grid will use the maximum available height from
-  /// its parent constraints. Useful for constraining the grid height.
+  /// its parent constraints. When placed in an unbounded height context
+  /// (e.g., inside a Column), the grid will automatically calculate its
+  /// height based on the number of rows, item size, and cross-axis spacing:
+  /// `height = rows * itemSize.height + (rows - 1) * crossAxisSpacing`
+  /// 
+  /// For more control, you can:
+  /// - Provide an explicit height value
+  /// - Wrap the grid in a SizedBox with a specific height
+  /// - Use Expanded when inside a Column or Flex widget
   final double? height;
 
   /// The amount of wobble effect applied to displaced items.
@@ -141,6 +149,16 @@ class NomoPageGrid extends StatelessWidget {
   ///
   /// See [PageGridController] for more details.
   final PageGridController? controller;
+  
+  /// The spacing between items along the main axis (horizontal).
+  ///
+  /// Defaults to 0.0. This adds space between columns in the grid.
+  final double mainAxisSpacing;
+  
+  /// The spacing between items along the cross axis (vertical).
+  ///
+  /// Defaults to 0.0. This adds space between rows in the grid.
+  final double crossAxisSpacing;
 
   const NomoPageGrid({
     super.key,
@@ -153,22 +171,44 @@ class NomoPageGrid extends StatelessWidget {
     this.wobbleAmount = 3,
     this.onChanged,
     this.controller,
+    this.mainAxisSpacing = 0.0,
+    this.crossAxisSpacing = 0.0,
   });
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Calculate the required height based on grid configuration with spacing
+        final calculatedHeight = rows * itemSize.height + 
+                                (rows > 1 ? (rows - 1) * crossAxisSpacing : 0);
+        
+        // Calculate the required width based on grid configuration with spacing
+        final calculatedWidth = columns * itemSize.width + 
+                               (columns > 1 ? (columns - 1) * mainAxisSpacing : 0);
+        
+        // Determine the appropriate height to use
+        final effectiveHeight = height ?? (constraints.maxHeight.isFinite 
+            ? constraints.maxHeight 
+            : calculatedHeight);
+            
+        // Determine the appropriate width to use
+        final effectiveWidth = width ?? (constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : calculatedWidth);
+        
         return _NomoPageGrid(
           rows: rows,
           columns: columns,
           itemSize: itemSize,
           items: items,
-          width: width ?? constraints.maxWidth,
-          height: height ?? constraints.maxHeight,
+          width: effectiveWidth,
+          height: effectiveHeight,
           wobbleAmount: wobbleAmount,
           onChanged: onChanged,
           controller: controller,
+          mainAxisSpacing: mainAxisSpacing,
+          crossAxisSpacing: crossAxisSpacing,
         );
       },
     );
@@ -361,6 +401,9 @@ class _NomoPageGrid extends StatefulWidget {
   final Map<int, Widget> items;
   final void Function(Map<int, Widget> newItems)? onChanged;
   final PageGridController? controller;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
+  
   _NomoPageGrid({
     required this.rows,
     required this.columns,
@@ -371,8 +414,20 @@ class _NomoPageGrid extends StatefulWidget {
     required this.height,
     required this.onChanged,
     this.controller,
-  }) : assert(height.isFinite && !height.isNegative, ""),
-       assert(width.isFinite && !width.isNegative, "");
+    required this.mainAxisSpacing,
+    required this.crossAxisSpacing,
+  }) : assert(
+          height.isFinite && height > 0,
+          'NomoPageGrid requires a finite positive height. '
+          'Either provide an explicit height parameter or ensure the widget '
+          'is placed in a container with bounded height constraints.',
+        ),
+        assert(
+          width.isFinite && width > 0,
+          'NomoPageGrid requires a finite positive width. '
+          'Either provide an explicit width parameter or ensure the widget '
+          'is placed in a container with bounded width constraints.',
+        );
 
   @override
   State<_NomoPageGrid> createState() => _NomoPageGridState();
@@ -390,6 +445,8 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
     itemSize: widget.itemSize,
     wobbleAmount: widget.wobbleAmount,
     onChanged: widget.onChanged,
+    mainAxisSpacing: widget.mainAxisSpacing,
+    crossAxisSpacing: widget.crossAxisSpacing,
   );
 
   @override
@@ -435,27 +492,36 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      key: _stackKey,
-      children: [
-        ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(
-            dragDevices: {
-              PointerDeviceKind.mouse,
-              PointerDeviceKind.touch,
-            },
-          ),
-          child: ValueListenableBuilder(
-            valueListenable: pageGridNotifier.pageCountNotifier,
-            builder: (context, pageCount, child) {
-              return GridView.builder(
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: widget.height,
+        maxHeight: widget.height,
+        minWidth: widget.width,
+        maxWidth: widget.width,
+      ),
+      child: Stack(
+        key: _stackKey,
+        children: [
+          ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.touch,
+              },
+            ),
+            child: ValueListenableBuilder(
+              valueListenable: pageGridNotifier.pageCountNotifier,
+              builder: (context, pageCount, child) {
+                return GridView.builder(
                 physics: PageScrollPhysics(),
                 scrollDirection: Axis.horizontal,
                 controller: pageGridNotifier.controller,
                 gridDelegate: NomoPageGridDelegate(
                   rows: widget.rows,
                   columns: widget.columns,
-                  itemSize: 64,
+                  itemSize: widget.itemSize.width,  // Use actual item width
+                  mainAxisSpacing: widget.mainAxisSpacing,
+                  crossAxisSpacing: widget.crossAxisSpacing,
                 ),
                 dragStartBehavior: DragStartBehavior.down,
 
@@ -540,6 +606,7 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
           ),
         ),
       ],
+    ),
     );
   }
 }
@@ -550,6 +617,8 @@ class NomoPageGridLayout extends SliverGridLayout {
   final double crossAxisExtent;
   final double mainAxisExtent;
   final double maxItemSize;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
 
   late final double itemWidth;
   late final double itemHeight;
@@ -560,9 +629,16 @@ class NomoPageGridLayout extends SliverGridLayout {
     required this.columns,
     required this.crossAxisExtent,
     required this.mainAxisExtent,
+    required this.mainAxisSpacing,
+    required this.crossAxisSpacing,
   }) {
-    itemWidth = mainAxisExtent / columns;
-    itemHeight = crossAxisExtent / rows;
+    // Calculate item dimensions accounting for spacing
+    itemWidth = columns > 1 
+        ? (mainAxisExtent - (columns - 1) * mainAxisSpacing) / columns
+        : mainAxisExtent;
+    itemHeight = rows > 1
+        ? (crossAxisExtent - (rows - 1) * crossAxisSpacing) / rows
+        : crossAxisExtent;
   }
 
   @override
@@ -588,9 +664,9 @@ class NomoPageGridLayout extends SliverGridLayout {
     final int row = pageIndex ~/ columns;
     final int col = pageIndex % columns;
 
-    double mainAxisOffset = col * itemWidth + page * mainAxisExtent;
-
-    final double crossAxisOffset = row * itemHeight;
+    // Calculate position with spacing
+    double mainAxisOffset = col * (itemWidth + mainAxisSpacing) + page * mainAxisExtent;
+    final double crossAxisOffset = row * (itemHeight + crossAxisSpacing);
 
     return SliverGridGeometry(
       scrollOffset: mainAxisOffset,
@@ -633,6 +709,8 @@ class NomoPageGridDelegate extends SliverGridDelegate {
       maxItemSize: itemSize,
       crossAxisExtent: constraints.crossAxisExtent,
       mainAxisExtent: constraints.viewportMainAxisExtent,
+      mainAxisSpacing: mainAxisSpacing,
+      crossAxisSpacing: crossAxisSpacing,
     );
   }
 
@@ -900,6 +978,8 @@ final class PageGridNotifier {
   final double viewportWidth;
   final double viewportHeight;
   final double wobbleAmount;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
 
   int get childrenPerPage => rows * columns;
   double get targetWidth => viewportWidth / columns;
@@ -942,13 +1022,17 @@ final class PageGridNotifier {
     required this.itemSize,
     required this.wobbleAmount,
     required this.onChanged,
+    required this.mainAxisSpacing,
+    required this.crossAxisSpacing,
   }) {
-    final maxIndex = initalItems.keys.reduce(
-      (value, element) {
-        return max(value, element);
-      },
-    );
-    final pages = (maxIndex / childrenPerPage).ceil();
+    final maxIndex = initalItems.isEmpty
+        ? 0
+        : initalItems.keys.reduce(
+            (value, element) {
+              return max(value, element);
+            },
+          );
+    final pages = maxIndex == 0 ? 1 : (maxIndex / childrenPerPage).ceil();
     pageCountNotifier = ValueNotifier(pages);
 
     controller.addListener(onScrollPositionChanged);
