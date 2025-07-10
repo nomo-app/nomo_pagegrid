@@ -364,9 +364,14 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
             listenable: Listenable.merge([
               pageGridNotifier.isDragging,
               pageGridNotifier.pageNotifier,
+              pageGridNotifier.pageCountNotifier,
             ]),
             builder: (context, child) {
-              if (pageGridNotifier.pageNotifier.value >= pageGridNotifier.maxPages - 1) {
+              final currentPage = pageGridNotifier.pageNotifier.value;
+              final totalPages = pageGridNotifier.pageCountNotifier.value;
+              final isLastPage = currentPage >= totalPages - 1;
+              
+              if (isLastPage) {
                 return SizedBox.shrink();
               }
               return AnimatedSwitcher(
@@ -394,6 +399,7 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
             listenable: Listenable.merge([
               pageGridNotifier.isDragging,
               pageGridNotifier.pageNotifier,
+              pageGridNotifier.pageCountNotifier,
             ]),
             builder: (context, child) {
               if (pageGridNotifier.pageNotifier.value <= 0) return SizedBox.shrink();
