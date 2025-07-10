@@ -154,3 +154,6 @@ linux/
 windows/
 web/
 macos/
+
+
+.claude/
