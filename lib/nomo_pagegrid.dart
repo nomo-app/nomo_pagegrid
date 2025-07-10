@@ -9,17 +9,136 @@ import 'src/page_grid_controller.dart';
 import 'src/page_grid_controller_state.dart';
 export 'src/page_grid_controller.dart';
 
-enum EdgeNavigationState { left, right }
+/// Represents the edge navigation state for page transitions.
+///
+/// Used internally to indicate which edge (left or right) is being navigated
+/// when transitioning between pages in the grid.
+enum EdgeNavigationState { 
+  /// Navigation from the left edge
+  left, 
+  /// Navigation from the right edge
+  right 
+}
 
+/// A customizable grid widget with drag-and-drop functionality and page-based navigation.
+///
+/// [NomoPageGrid] creates a grid layout where items can be dragged and reordered
+/// by long-pressing and dragging them to new positions. The grid supports multiple
+/// pages that users can navigate between by swiping horizontally.
+///
+/// ## Features:
+/// - **Drag and Drop**: Long-press any item to drag it to a new position
+/// - **Smart Displacement**: Items automatically move out of the way when dragging
+/// - **Page Navigation**: Swipe left/right to navigate between pages
+/// - **Customizable Layout**: Configure rows, columns, and item sizes
+/// - **Empty Slots**: Supports grids with empty positions
+/// - **Controller Support**: Use [PageGridController] for programmatic control
+///
+/// ## Basic Usage:
+/// ```dart
+/// NomoPageGrid(
+///   rows: 3,
+///   columns: 3,
+///   itemSize: Size(64, 64),
+///   items: {
+///     0: Container(color: Colors.red),
+///     1: Container(color: Colors.blue),
+///     2: Container(color: Colors.green),
+///   },
+///   onChanged: (newItems) {
+///     setState(() => items = newItems);
+///   },
+/// )
+/// ```
+///
+/// ## With Controller:
+/// ```dart
+/// final controller = PageGridController();
+/// 
+/// NomoPageGrid(
+///   controller: controller,
+///   rows: 4,
+///   columns: 4,
+///   itemSize: Size(80, 80),
+///   items: items,
+///   onChanged: (newItems) => setState(() => items = newItems),
+/// )
+/// 
+/// // Navigate programmatically
+/// controller.nextPage();
+/// controller.previousPage();
+/// controller.animateToPage(2);
+/// ```
+///
+/// The widget automatically calculates the number of pages based on the total
+/// number of items and the grid dimensions (rows × columns per page).
 class NomoPageGrid extends StatelessWidget {
+  /// Number of rows in the grid per page.
+  ///
+  /// Must be a positive integer. Together with [columns], this determines
+  /// how many items can fit on a single page.
   final int rows;
+  
+  /// Number of columns in the grid per page.
+  ///
+  /// Must be a positive integer. Together with [rows], this determines
+  /// how many items can fit on a single page.
   final int columns;
+  
+  /// The size of each grid item.
+  ///
+  /// All items in the grid will have this exact size. The total grid size
+  /// is calculated based on this size multiplied by the number of rows/columns.
   final Size itemSize;
+  
+  /// Optional fixed width for the grid.
+  ///
+  /// If not specified, the grid will use the maximum available width from
+  /// its parent constraints. Useful for centering the grid or limiting its width.
   final double? width;
+  
+  /// Optional fixed height for the grid.
+  ///
+  /// If not specified, the grid will use the maximum available height from
+  /// its parent constraints. Useful for constraining the grid height.
   final double? height;
+  
+  /// The amount of wobble effect applied to displaced items.
+  ///
+  /// When an item is displaced by dragging another item, it will wobble
+  /// with this amplitude (in logical pixels). Defaults to 3.0.
+  /// Set to 0 to disable the wobble effect.
   final double wobbleAmount;
+  
+  /// Map of items to display in the grid.
+  ///
+  /// The key represents the position index (0-based) and the value is the
+  /// widget to display at that position. Empty positions (missing keys) will
+  /// show as empty slots in the grid.
+  ///
+  /// Position indices are calculated as: `index = page * (rows * columns) + row * columns + column`
   final Map<int, Widget> items;
+  
+  /// Callback invoked when items are reordered through drag-and-drop.
+  ///
+  /// The callback receives the new item arrangement as a Map where keys
+  /// are position indices and values are the widgets. You should update
+  /// your state with these new positions to persist the changes.
+  ///
+  /// Example:
+  /// ```dart
+  /// onChanged: (newItems) {
+  ///   setState(() => items = newItems);
+  /// }
+  /// ```
   final void Function(Map<int, Widget> newItems)? onChanged;
+  
+  /// Optional controller for programmatic page navigation.
+  ///
+  /// Use [PageGridController] to navigate between pages programmatically,
+  /// get the current page, or listen to page changes.
+  ///
+  /// See [PageGridController] for more details.
   final PageGridController? controller;
 
   const NomoPageGrid({
