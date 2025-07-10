@@ -102,11 +102,11 @@ void main() {
       expect(find.byType(SliverAppBar), findsOneWidget);
       expect(find.byType(SliverNomoPageGrid), findsOneWidget);
       expect(find.byType(SliverList), findsOneWidget);
-      
+
       // Grid items
       expect(find.text('0'), findsOneWidget);
       expect(find.text('1'), findsOneWidget);
-      
+
       // List items
       expect(find.text('Item 0'), findsOneWidget);
     });
@@ -144,14 +144,14 @@ void main() {
       // Perform drag operation
       final item0Position = findItemPosition(tester, 0);
       final item3Position = findItemPosition(tester, 3);
-      
+
       if (item0Position != null && item3Position != null) {
         await dragFromTo(
           tester,
           from: item0Position,
           to: item3Position,
         );
-        
+
         // Verify onChanged was called
         expect(changedItems, isNotNull);
       }
@@ -177,12 +177,14 @@ void main() {
       );
 
       final sizedBox = tester.widget<SizedBox>(
-        find.descendant(
-          of: find.byType(SliverNomoPageGrid),
-          matching: find.byType(SizedBox),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(SliverNomoPageGrid),
+              matching: find.byType(SizedBox),
+            )
+            .first,
       );
-      
+
       expect(sizedBox.height, equals(300));
     });
 
@@ -209,7 +211,7 @@ void main() {
       );
 
       await tester.pump();
-      
+
       expect(controller.hasClients, isTrue);
       expect(controller.currentPage, equals(0));
       expect(controller.pageCount, equals(2));

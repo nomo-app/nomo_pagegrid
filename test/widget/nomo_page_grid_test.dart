@@ -77,7 +77,7 @@ void main() {
       );
 
       expect(find.byType(NomoPageGrid), findsOneWidget);
-      
+
       // Should show all 12 items on first page (3x4 grid)
       for (int i = 0; i < 12; i++) {
         expect(find.text('$i'), findsOneWidget);
@@ -110,14 +110,14 @@ void main() {
       // Perform drag operation
       final item0Position = findItemPosition(tester, 0);
       final item3Position = findItemPosition(tester, 3);
-      
+
       if (item0Position != null && item3Position != null) {
         await dragFromTo(
           tester,
           from: item0Position,
           to: item3Position,
         );
-        
+
         // Verify onChanged was called
         expect(changedItems, isNotNull);
         // The exact reordering depends on the displacement algorithm
@@ -164,7 +164,7 @@ void main() {
       );
 
       expect(find.byType(NomoPageGrid), findsOneWidget);
-      
+
       // The actual wobble animation would be tested by checking
       // transform matrices during drag, but that requires more
       // complex animation testing
@@ -222,7 +222,7 @@ void main() {
       // Item 1 should be to the right of item 0
       // Item 2 should be below item 0
       // Item 3 should be bottom-right
-      
+
       expect(positions[0], isNotNull);
       expect(positions[1], isNotNull);
       expect(positions[2], isNotNull);

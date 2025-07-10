@@ -13,11 +13,12 @@ export 'src/page_grid_controller.dart';
 ///
 /// Used internally to indicate which edge (left or right) is being navigated
 /// when transitioning between pages in the grid.
-enum EdgeNavigationState { 
+enum EdgeNavigationState {
   /// Navigation from the left edge
-  left, 
+  left,
+
   /// Navigation from the right edge
-  right 
+  right,
 }
 
 /// A customizable grid widget with drag-and-drop functionality and page-based navigation.
@@ -54,7 +55,7 @@ enum EdgeNavigationState {
 /// ## With Controller:
 /// ```dart
 /// final controller = PageGridController();
-/// 
+///
 /// NomoPageGrid(
 ///   controller: controller,
 ///   rows: 4,
@@ -63,7 +64,7 @@ enum EdgeNavigationState {
 ///   items: items,
 ///   onChanged: (newItems) => setState(() => items = newItems),
 /// )
-/// 
+///
 /// // Navigate programmatically
 /// controller.nextPage();
 /// controller.previousPage();
@@ -78,38 +79,38 @@ class NomoPageGrid extends StatelessWidget {
   /// Must be a positive integer. Together with [columns], this determines
   /// how many items can fit on a single page.
   final int rows;
-  
+
   /// Number of columns in the grid per page.
   ///
   /// Must be a positive integer. Together with [rows], this determines
   /// how many items can fit on a single page.
   final int columns;
-  
+
   /// The size of each grid item.
   ///
   /// All items in the grid will have this exact size. The total grid size
   /// is calculated based on this size multiplied by the number of rows/columns.
   final Size itemSize;
-  
+
   /// Optional fixed width for the grid.
   ///
   /// If not specified, the grid will use the maximum available width from
   /// its parent constraints. Useful for centering the grid or limiting its width.
   final double? width;
-  
+
   /// Optional fixed height for the grid.
   ///
   /// If not specified, the grid will use the maximum available height from
   /// its parent constraints. Useful for constraining the grid height.
   final double? height;
-  
+
   /// The amount of wobble effect applied to displaced items.
   ///
   /// When an item is displaced by dragging another item, it will wobble
   /// with this amplitude (in logical pixels). Defaults to 3.0.
   /// Set to 0 to disable the wobble effect.
   final double wobbleAmount;
-  
+
   /// Map of items to display in the grid.
   ///
   /// The key represents the position index (0-based) and the value is the
@@ -118,7 +119,7 @@ class NomoPageGrid extends StatelessWidget {
   ///
   /// Position indices are calculated as: `index = page * (rows * columns) + row * columns + column`
   final Map<int, Widget> items;
-  
+
   /// Callback invoked when items are reordered through drag-and-drop.
   ///
   /// The callback receives the new item arrangement as a Map where keys
@@ -132,7 +133,7 @@ class NomoPageGrid extends StatelessWidget {
   /// }
   /// ```
   final void Function(Map<int, Widget> newItems)? onChanged;
-  
+
   /// Optional controller for programmatic page navigation.
   ///
   /// Use [PageGridController] to navigate between pages programmatically,
@@ -489,7 +490,7 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
               final currentPage = pageGridNotifier.pageNotifier.value;
               final totalPages = pageGridNotifier.pageCountNotifier.value;
               final isLastPage = currentPage >= totalPages - 1;
-              
+
               if (isLastPage) {
                 return SizedBox.shrink();
               }
@@ -957,7 +958,7 @@ final class PageGridNotifier {
 
   Timer? _edgeNavigationTimer;
   EdgeNavigationState? _currentEdgeState;
-  
+
   static const Duration _initialNavigationDelay = Duration(milliseconds: 600);
   static const Duration _repeatNavigationDelay = Duration(milliseconds: 400);
 
@@ -1339,30 +1340,30 @@ final class PageGridNotifier {
 
   void _startEdgeNavigation(EdgeNavigationState edge) {
     _currentEdgeState = edge;
-    
+
     // Initial navigation after delay
     _edgeNavigationTimer = Timer(_initialNavigationDelay, () {
       _navigateToEdge();
-      
+
       // Setup repeating navigation
       _edgeNavigationTimer = Timer.periodic(_repeatNavigationDelay, (_) {
         _navigateToEdge();
       });
     });
   }
-  
+
   void _stopEdgeNavigation() {
     _edgeNavigationTimer?.cancel();
     _edgeNavigationTimer = null;
     _currentEdgeState = null;
   }
-  
+
   void _navigateToEdge() {
     if (_currentEdgeState == null) return;
-    
+
     final currentPage = pageNotifier.value;
     final maxPage = pageCountNotifier.value - 1;
-    
+
     if (_currentEdgeState == EdgeNavigationState.right && currentPage < maxPage) {
       controller.animateTo(
         controller.offset + viewportWidth,
@@ -1383,17 +1384,17 @@ final class PageGridNotifier {
 
   void onChildDragUpdate(DragUpdateDetails dragUpdate) {
     final globalOffset = dragUpdate.globalPosition;
-    
+
     // Edge detection zones: 32px for activation
     const edgeZone = 32.0;
     // Hysteresis zone: 40px to prevent oscillation
     const hysteresisZone = 40.0;
-    
+
     final isInRightEdge = viewportWidth - globalOffset.dx < edgeZone;
     final isInLeftEdge = globalOffset.dx < edgeZone;
-    final isOutsideHysteresis = globalOffset.dx > hysteresisZone && 
-                                globalOffset.dx < viewportWidth - hysteresisZone;
-    
+    final isOutsideHysteresis =
+        globalOffset.dx > hysteresisZone && globalOffset.dx < viewportWidth - hysteresisZone;
+
     if (isInRightEdge) {
       if (_currentEdgeState != EdgeNavigationState.right) {
         _stopEdgeNavigation();

@@ -88,7 +88,7 @@ Future<void> dragFromTo(
 Offset? findItemPosition(WidgetTester tester, int index) {
   final finder = find.byKey(ValueKey('item_$index'));
   if (finder.evaluate().isEmpty) return null;
-  
+
   final RenderBox box = tester.renderObject(finder);
   return box.localToGlobal(Offset.zero) + box.size.center(Offset.zero);
 }
@@ -119,7 +119,7 @@ extension NomoPageGridTester on WidgetTester {
     final controller = widget<NomoPageGrid>(find.byType(NomoPageGrid)).controller;
     return controller?.currentPage;
   }
-  
+
   /// Gets the total page count from a NomoPageGrid with controller
   int? getPageCount() {
     final controller = widget<NomoPageGrid>(find.byType(NomoPageGrid)).controller;

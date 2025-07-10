@@ -44,7 +44,11 @@ void main() {
       );
 
       expect(
-        () => controller.animateToPage(0, duration: Duration(milliseconds: 300), curve: Curves.easeInOut),
+        () => controller.animateToPage(
+          0,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        ),
         throwsA(isA<AssertionError>()),
       );
 
@@ -59,14 +63,18 @@ void main() {
       void listener() {}
       testController.addListener(listener);
       testController.removeListener(listener);
-      
+
       expect(() => testController.dispose(), returnsNormally);
     });
 
     test('page validation assertions work correctly', () {
       // These would fail with attached state that has pageCount > 0
       expect(
-        () => controller.animateToPage(-1, duration: Duration(milliseconds: 300), curve: Curves.easeInOut),
+        () => controller.animateToPage(
+          -1,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        ),
         throwsA(isA<AssertionError>()),
       );
 

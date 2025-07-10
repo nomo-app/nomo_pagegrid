@@ -1,495 +1,227 @@
 import 'package:flutter/material.dart';
-import 'package:nomo_pagegrid/nomo_pagegrid.dart';
+import 'basic/simple_grid.dart';
+import 'basic/custom_items.dart';
+import 'basic/empty_slots.dart';
+import 'advanced/controller_usage.dart';
+import 'advanced/drag_callbacks.dart';
+import 'advanced/multi_page.dart';
+import 'advanced/animations.dart';
+import 'customization/theming.dart';
+import 'customization/sizes.dart';
+import 'customization/indicators.dart';
+import 'real_world/photo_gallery.dart';
+import 'real_world/app_launcher.dart';
+import 'real_world/dashboard.dart';
 
 void main() {
-  runApp(const MainApp());
+  runApp(const MyApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'NomoPageGrid Example',
+      title: 'NomoPageGrid Examples',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: const ExampleCatalog(),
     );
   }
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class ExampleCatalog extends StatelessWidget {
+  const ExampleCatalog({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('NomoPageGrid Examples'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NormalGridScreen(),
-                  ),
-                );
-              },
-              child: const Text('Normal NomoPageGrid'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SliverGridScreen(),
-                  ),
-                );
-              },
-              child: const Text('SliverNomoPageGrid'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ControllerGridScreen(),
-                  ),
-                );
-              },
-              child: const Text('PageGridController Demo'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class NormalGridScreen extends StatefulWidget {
-  const NormalGridScreen({super.key});
-
-  @override
-  State<NormalGridScreen> createState() => _NormalGridScreenState();
-}
-
-class _NormalGridScreenState extends State<NormalGridScreen> {
-  late Map<int, Widget> items;
-
-  @override
-  void initState() {
-    super.initState();
-    items = _generateItems();
-  }
-
-  Map<int, Widget> _generateItems() {
-    return {
-      0: _buildItem(Colors.red, '0'),
-      1: _buildItem(Colors.yellow, '1'),
-      2: _buildItem(Colors.deepOrange, '2'),
-      3: _buildItem(Colors.blue, '3'),
-      4: _buildItem(Colors.cyan, '4'),
-      // 5: _buildItem(Colors.green, '5'),
-      // 6: _buildItem(Colors.greenAccent, '6'),
-      // 7: _buildItem(Colors.deepPurple, '7'),
-      // 8: _buildItem(Colors.blueAccent, '8'),
-      // 9: _buildItem(Colors.pink, '9'),
-      // 10: _buildItem(Colors.amber, '10'),
-      11: _buildItem(Colors.teal, '11'),
-      32: _buildItem(Colors.lime, '32'),
-      33: _buildItem(Colors.indigo, '33'),
-    };
-  }
-
-  Widget _buildItem(Color color, String label) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Normal NomoPageGrid'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: NomoPageGrid(
-          rows: 4,
-          columns: 4,
-          itemSize: const Size(80, 80),
-          wobbleAmount: 3,
-          onChanged: (newItems) {
-            setState(() {
-              items = newItems;
-            });
-            print("Items reordered");
-          },
-          items: items,
-        ),
-      ),
-    );
-  }
-}
-
-class SliverGridScreen extends StatefulWidget {
-  const SliverGridScreen({super.key});
-
-  @override
-  State<SliverGridScreen> createState() => _SliverGridScreenState();
-}
-
-class _SliverGridScreenState extends State<SliverGridScreen> {
-  late Map<int, Widget> items;
-
-  @override
-  void initState() {
-    super.initState();
-    items = _generateItems();
-  }
-
-  Map<int, Widget> _generateItems() {
-    return {
-      0: _buildItem(Colors.red, '0'),
-      1: _buildItem(Colors.yellow, '1'),
-      2: _buildItem(Colors.deepOrange, '2'),
-      3: _buildItem(Colors.blue, '3'),
-      // 4: _buildItem(Colors.cyan, '4'),
-      // 5: _buildItem(Colors.green, '5'),
-      // 6: _buildItem(Colors.greenAccent, '6'),
-      // 7: _buildItem(Colors.deepPurple, '7'),
-      // 8: _buildItem(Colors.blueAccent, '8'),
-      9: _buildItem(Colors.pink, '9'),
-      10: _buildItem(Colors.amber, '10'),
-      11: _buildItem(Colors.teal, '11'),
-    };
-  }
-
-  Widget _buildItem(Color color, String label) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          const SliverAppBar(
-            title: Text('SliverNomoPageGrid Example'),
-            pinned: true,
-            expandedHeight: 120,
-            flexibleSpace: FlexibleSpaceBar(
-              background: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue, Colors.purple],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Drag and drop items in the grid below',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'The grid is embedded in a CustomScrollView with other slivers',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            sliver: SliverNomoPageGrid(
-              rows: 3,
-              columns: 4,
-              itemSize: const Size(80, 80),
-              height: 300,
-              wobbleAmount: 3,
-              onChanged: (newItems) {
-                setState(() {
-                  items = newItems;
-                });
-                print("Sliver items reordered");
-              },
-              items: items,
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Other content below the grid',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-            ),
-          ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => ListTile(
-                leading: CircleAvatar(
-                  child: Text('$index'),
-                ),
-                title: Text('List item $index'),
-                subtitle: const Text('This is a regular sliver list item'),
-              ),
-              childCount: 20,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ControllerGridScreen extends StatefulWidget {
-  const ControllerGridScreen({super.key});
-
-  @override
-  State<ControllerGridScreen> createState() => _ControllerGridScreenState();
-}
-
-class _ControllerGridScreenState extends State<ControllerGridScreen> {
-  late Map<int, Widget> items;
-  final PageGridController controller = PageGridController();
-  int currentPage = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    items = _generateItems();
-    controller.addListener(_onControllerChanged);
-  }
-
-  @override
-  void dispose() {
-    controller.removeListener(_onControllerChanged);
-    controller.dispose();
-    super.dispose();
-  }
-
-  void _onControllerChanged() {
-    if (mounted) {
-      setState(() {
-        currentPage = controller.currentPage;
-      });
-    }
-  }
-
-  Map<int, Widget> _generateItems() {
-    final colors = [
-      Colors.red,
-      Colors.yellow,
-      Colors.deepOrange,
-      Colors.blue,
-      Colors.cyan,
-      Colors.green,
-      Colors.greenAccent,
-      Colors.deepPurple,
-      Colors.blueAccent,
-      Colors.pink,
-      Colors.amber,
-      Colors.teal,
-      Colors.lime,
-      Colors.indigo,
-      Colors.orange,
-      Colors.purple,
-      Colors.brown,
-      Colors.grey,
-      Colors.lightBlue,
-      Colors.lightGreen,
-      Colors.redAccent,
-      Colors.yellowAccent,
-      Colors.orangeAccent,
-      Colors.blueGrey,
-      Colors.deepOrangeAccent,
-      Colors.pinkAccent,
-      Colors.purpleAccent,
-      Colors.indigoAccent,
-      Colors.cyanAccent,
-      Colors.lightBlueAccent,
-      Colors.lightGreenAccent,
-      Colors.amberAccent,
-    ];
-
-    return {
-      for (int i = 0; i < colors.length; i++) i: _buildItem(colors[i], '$i'),
-    };
-  }
-
-  Widget _buildItem(Color color, String label) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('PageGridController Demo'),
         centerTitle: true,
       ),
-      body: Column(
+      body: ListView(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Text(
-                  'Page ${currentPage + 1} of ${controller.pageCount == 0 ? '?' : controller.pageCount}',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: currentPage > 0 ? () => controller.previousPage() : null,
-                      icon: const Icon(Icons.arrow_back),
-                      label: const Text('Previous'),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: controller.hasClients && currentPage < controller.pageCount - 1
-                          ? () => controller.nextPage()
-                          : null,
-                      icon: const Icon(Icons.arrow_forward),
-                      label: const Text('Next'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => controller.jumpToPage(0),
-                      child: const Text('Jump to First'),
-                    ),
-                    ElevatedButton(
-                      onPressed: controller.hasClients && controller.pageCount > 0
-                          ? () => controller.animateToPage(
-                              controller.pageCount - 1,
-                              duration: const Duration(milliseconds: 800),
-                              curve: Curves.easeInOutCubic,
-                            )
-                          : null,
-                      child: const Text('Animate to Last'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: NomoPageGrid(
-                controller: controller,
-                rows: 4,
-                columns: 4,
-                itemSize: const Size(80, 80),
-                wobbleAmount: 3,
-                onChanged: (newItems) {
-                  setState(() {
-                    items = newItems;
-                  });
-                },
-                items: items,
+          _buildSection(
+            context,
+            'Basic Examples',
+            'Get started with fundamental grid features',
+            [
+              _ExampleTile(
+                title: 'Simple Grid',
+                subtitle: 'Basic grid with colored containers',
+                icon: Icons.grid_view,
+                builder: () => const SimpleGridExample(),
               ),
-            ),
+              _ExampleTile(
+                title: 'Custom Items',
+                subtitle: 'Grid with custom widget items',
+                icon: Icons.widgets,
+                builder: () => const CustomItemsExample(),
+              ),
+              _ExampleTile(
+                title: 'Empty Slots',
+                subtitle: 'Handling grids with empty positions',
+                icon: Icons.grid_off,
+                builder: () => const EmptySlotsExample(),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                for (int i = 0; i < controller.pageCount; i++)
-                  ActionChip(
-                    label: Text('${i + 1}'),
-                    onPressed: () => controller.animateToPage(
-                      i,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    ),
-                    backgroundColor: i == currentPage ? Theme.of(context).primaryColor : null,
-                    labelStyle: TextStyle(
-                      color: i == currentPage ? Colors.white : null,
-                    ),
-                  ),
-              ],
-            ),
+          _buildSection(
+            context,
+            'Advanced Examples',
+            'Explore advanced features and controls',
+            [
+              _ExampleTile(
+                title: 'Controller Usage',
+                subtitle: 'Full controller demo with navigation',
+                icon: Icons.control_camera,
+                builder: () => const ControllerUsageExample(),
+              ),
+              _ExampleTile(
+                title: 'Drag Callbacks',
+                subtitle: 'Track drag events and feedback',
+                icon: Icons.touch_app,
+                builder: () => const DragCallbacksExample(),
+              ),
+              _ExampleTile(
+                title: 'Multi-Page Grid',
+                subtitle: 'Large grid with multiple pages',
+                icon: Icons.view_carousel,
+                builder: () => const MultiPageExample(),
+              ),
+              _ExampleTile(
+                title: 'Animations',
+                subtitle: 'Custom wobble and visual effects',
+                icon: Icons.animation,
+                builder: () => const AnimationsExample(),
+              ),
+            ],
+          ),
+          _buildSection(
+            context,
+            'Customization',
+            'Style and configure your grids',
+            [
+              _ExampleTile(
+                title: 'Theming',
+                subtitle: 'Different color schemes and themes',
+                icon: Icons.palette,
+                builder: () => const ThemingExample(),
+              ),
+              _ExampleTile(
+                title: 'Sizes',
+                subtitle: 'Various grid dimensions and layouts',
+                icon: Icons.aspect_ratio,
+                builder: () => const SizesExample(),
+              ),
+              _ExampleTile(
+                title: 'Indicators',
+                subtitle: 'Custom page indicators and controls',
+                icon: Icons.radio_button_checked,
+                builder: () => const IndicatorsExample(),
+              ),
+            ],
+          ),
+          _buildSection(
+            context,
+            'Real-World Examples',
+            'Production-ready implementations',
+            [
+              _ExampleTile(
+                title: 'Photo Gallery',
+                subtitle: 'Image grid with reordering',
+                icon: Icons.photo_library,
+                builder: () => const PhotoGalleryExample(),
+              ),
+              _ExampleTile(
+                title: 'App Launcher',
+                subtitle: 'App icon grid with folders',
+                icon: Icons.apps,
+                builder: () => const AppLauncherExample(),
+              ),
+              _ExampleTile(
+                title: 'Dashboard',
+                subtitle: 'Widget dashboard with tiles',
+                icon: Icons.dashboard,
+                builder: () => const DashboardExample(),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    String description,
+    List<_ExampleTile> tiles,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        ...tiles,
+        const Divider(height: 1),
+      ],
+    );
+  }
+}
+
+class _ExampleTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Widget Function() builder;
+
+  const _ExampleTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.builder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => builder(),
+          ),
+        );
+      },
     );
   }
 }

@@ -86,7 +86,7 @@ void main() {
       // Test 2: Drag and drop on page 2
       final item4Position = findItemPosition(tester, 4);
       final item7Position = findItemPosition(tester, 7);
-      
+
       if (item4Position != null && item7Position != null) {
         await dragFromTo(
           tester,
@@ -120,8 +120,10 @@ void main() {
           color: Colors.blue,
           child: const Text('Text', style: TextStyle(color: Colors.white)),
         ),
-        2: Image.asset('assets/test.png', errorBuilder: (_, __, ___) => 
-          Container(color: Colors.grey)),
+        2: Image.asset(
+          'assets/test.png',
+          errorBuilder: (_, __, ___) => Container(color: Colors.grey),
+        ),
         3: ElevatedButton(
           onPressed: () {},
           child: const Text('Button'),
@@ -147,10 +149,10 @@ void main() {
 
     testWidgets('grid performance with many items', (tester) async {
       final stopwatch = Stopwatch()..start();
-      
+
       // Create a large grid
       final items = createTestItems(100);
-      
+
       await tester.pumpWidget(
         TestApp(
           child: NomoPageGrid(
@@ -163,20 +165,20 @@ void main() {
       );
 
       stopwatch.stop();
-      
+
       // Initial render should be reasonably fast
       expect(stopwatch.elapsedMilliseconds, lessThan(1000));
 
       // Navigate through pages
       stopwatch.reset();
       stopwatch.start();
-      
+
       for (int i = 0; i < 3; i++) {
         await swipeToNextPage(tester);
       }
-      
+
       stopwatch.stop();
-      
+
       // Page navigation should be smooth
       expect(stopwatch.elapsedMilliseconds, lessThan(2000));
     });
@@ -266,7 +268,7 @@ void main() {
       );
 
       expect(find.byType(NomoPageGrid), findsOneWidget);
-      
+
       // Test with single item
       await tester.pumpWidget(
         TestApp(

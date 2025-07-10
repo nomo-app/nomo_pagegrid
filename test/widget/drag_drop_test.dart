@@ -21,13 +21,13 @@ void main() {
       // Start long press
       final item0Position = findItemPosition(tester, 0)!;
       final gesture = await tester.startGesture(item0Position);
-      
+
       // Wait for long press duration
       await tester.pump(const Duration(milliseconds: 500));
-      
+
       // Item should be in dragging state
       expect(find.byType(Draggable), findsWidgets);
-      
+
       await gesture.up();
       await tester.pump();
     });
@@ -63,7 +63,8 @@ void main() {
       // Find empty position (bottom-right)
       final gridFinder = find.byType(NomoPageGrid);
       final gridBox = tester.renderObject<RenderBox>(gridFinder);
-      final emptyPosition = gridBox.localToGlobal(Offset.zero) + 
+      final emptyPosition =
+          gridBox.localToGlobal(Offset.zero) +
           Offset(gridBox.size.width * 0.75, gridBox.size.height * 0.75);
 
       // Drag item 0 to empty position
@@ -106,7 +107,7 @@ void main() {
       // Drag item 0 to position of item 3
       final item0Position = findItemPosition(tester, 0)!;
       final item3Position = findItemPosition(tester, 3)!;
-      
+
       await dragFromTo(
         tester,
         from: item0Position,
@@ -147,11 +148,11 @@ void main() {
       final item0Position = findItemPosition(tester, 0)!;
       final gesture = await tester.startGesture(item0Position);
       await tester.pump(const Duration(milliseconds: 500));
-      
+
       // Move outside grid bounds
       await gesture.moveTo(const Offset(-100, -100));
       await tester.pump();
-      
+
       // Release
       await gesture.up();
       await tester.pump();
@@ -176,19 +177,19 @@ void main() {
       // Start dragging item 0
       final item0Position = findItemPosition(tester, 0)!;
       final item1Position = findItemPosition(tester, 1)!;
-      
+
       final gesture = await tester.startGesture(item0Position);
       await tester.pump(const Duration(milliseconds: 500));
-      
+
       // Move towards item 1 to trigger displacement
       await gesture.moveTo(item1Position);
       await tester.pump();
-      
+
       // Item 1 should be wobbling (animation active)
       // We can't easily test the actual wobble transform,
       // but we verify the widget tree is updated
       expect(find.byKey(const ValueKey('item_1')), findsOneWidget);
-      
+
       await gesture.up();
       await tester.pump();
     });
@@ -217,31 +218,32 @@ void main() {
       );
 
       await tester.pump();
-      
+
       // Start on page 0
       expect(controller.currentPage, equals(0));
-      
+
       // Start dragging item 0
       final item0Position = findItemPosition(tester, 0)!;
       final gesture = await tester.startGesture(item0Position);
       await tester.pump(const Duration(milliseconds: 500));
-      
+
       // Move to right edge to trigger page navigation
       final gridFinder = find.byType(NomoPageGrid);
       final gridBox = tester.renderObject<RenderBox>(gridFinder);
-      final rightEdge = gridBox.localToGlobal(Offset.zero) + 
+      final rightEdge =
+          gridBox.localToGlobal(Offset.zero) +
           Offset(gridBox.size.width - 10, gridBox.size.height / 2);
-      
+
       await gesture.moveTo(rightEdge);
       await tester.pump(const Duration(milliseconds: 1000));
-      
+
       // This might trigger page navigation depending on implementation
       // The exact behavior would need to be verified based on
       // the actual edge navigation implementation
-      
+
       await gesture.up();
       await tester.pump();
-      
+
       controller.dispose();
     });
 
@@ -274,20 +276,20 @@ void main() {
       final item1Position = findItemPosition(tester, 1)!;
       final item2Position = findItemPosition(tester, 2)!;
       final item3Position = findItemPosition(tester, 3)!;
-      
+
       final gesture = await tester.startGesture(item0Position);
       await tester.pump(const Duration(milliseconds: 500));
-      
+
       // Move through intermediate positions
       await gesture.moveTo(item1Position);
       await tester.pump(const Duration(milliseconds: 100));
-      
+
       await gesture.moveTo(item2Position);
       await tester.pump(const Duration(milliseconds: 100));
-      
+
       await gesture.moveTo(item3Position);
       await tester.pump(const Duration(milliseconds: 100));
-      
+
       await gesture.up();
       await tester.pump();
 
