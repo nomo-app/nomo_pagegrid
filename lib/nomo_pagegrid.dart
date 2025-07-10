@@ -730,6 +730,36 @@ enum PushDirection {
   const PushDirection(this.x, this.y);
 }
 
+enum DirectionCompatibility {
+  same(0),
+  perpendicular(1),
+  opposite(2);
+
+  final int score;
+  const DirectionCompatibility(this.score);
+}
+
+DirectionCompatibility getDirectionCompatibility(
+  PushDirection preferred,
+  PushDirection candidate,
+) {
+  // Same direction
+  if (preferred == candidate) {
+    return DirectionCompatibility.same;
+  }
+
+  // Opposite directions
+  if ((preferred == PushDirection.FromLeft && candidate == PushDirection.FromRight) ||
+      (preferred == PushDirection.FromRight && candidate == PushDirection.FromLeft) ||
+      (preferred == PushDirection.FromTop && candidate == PushDirection.FromBottom) ||
+      (preferred == PushDirection.FromBottom && candidate == PushDirection.FromTop)) {
+    return DirectionCompatibility.opposite;
+  }
+
+  // Perpendicular directions
+  return DirectionCompatibility.perpendicular;
+}
+
 typedef Position = ({int x, int y});
 
 final class PageGridNotifier {
@@ -1089,7 +1119,16 @@ final class PageGridNotifier {
       }
 
       if (possiblePushes.isNotEmpty) {
-        possiblePushes.sort((a, b) => a.chain.length.compareTo(b.chain.length));
+        possiblePushes.sort((a, b) {
+          // First sort by chain length
+          final lengthComparison = a.chain.length.compareTo(b.chain.length);
+          if (lengthComparison != 0) return lengthComparison;
+
+          // For equal lengths, prefer perpendicular over opposite directions
+          final aCompat = getDirectionCompatibility(preferedDirection, a.direction);
+          final bCompat = getDirectionCompatibility(preferedDirection, b.direction);
+          return aCompat.score.compareTo(bCompat.score);
+        });
 
         bestPush = possiblePushes.first.chain;
         direction = possiblePushes.first.direction;
