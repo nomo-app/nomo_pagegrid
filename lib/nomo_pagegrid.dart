@@ -4,6 +4,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import 'src/page_grid_controller.dart';
+import 'src/page_grid_controller_state.dart';
+export 'src/page_grid_controller.dart';
+
 class NomoPageGrid extends StatelessWidget {
   final int rows;
   final int columns;
@@ -13,6 +17,7 @@ class NomoPageGrid extends StatelessWidget {
   final double wobbleAmount;
   final Map<int, Widget> items;
   final void Function(Map<int, Widget> newItems)? onChanged;
+  final PageGridController? controller;
 
   const NomoPageGrid({
     super.key,
@@ -24,6 +29,7 @@ class NomoPageGrid extends StatelessWidget {
     this.height,
     this.wobbleAmount = 3,
     this.onChanged,
+    this.controller,
   });
 
   @override
@@ -39,6 +45,7 @@ class NomoPageGrid extends StatelessWidget {
           height: height ?? constraints.maxHeight,
           wobbleAmount: wobbleAmount,
           onChanged: onChanged,
+          controller: controller,
         );
       },
     );
@@ -82,24 +89,27 @@ class NomoPageGrid extends StatelessWidget {
 class SliverNomoPageGrid extends StatelessWidget {
   /// Number of rows in the grid
   final int rows;
-  
+
   /// Number of columns in the grid
   final int columns;
-  
+
   /// Size of each item in the grid
   final Size itemSize;
-  
+
   /// Required height of the sliver widget
   final double? height;
-  
+
   /// Amount of wobble effect when items are displaced (default: 3)
   final double wobbleAmount;
-  
+
   /// Map of items where key is the position index and value is the widget
   final Map<int, Widget> items;
-  
+
   /// Callback when items are reordered through drag-and-drop
   final void Function(Map<int, Widget> newItems)? onChanged;
+
+  /// Optional controller for programmatic page navigation
+  final PageGridController? controller;
 
   const SliverNomoPageGrid({
     super.key,
@@ -110,10 +120,11 @@ class SliverNomoPageGrid extends StatelessWidget {
     this.height,
     this.wobbleAmount = 3,
     this.onChanged,
-  })  : assert(
-          height != null && height > 0,
-          'SliverNomoPageGrid requires a positive height value',
-        );
+    this.controller,
+  }) : assert(
+         height != null && height > 0,
+         'SliverNomoPageGrid requires a positive height value',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +137,7 @@ class SliverNomoPageGrid extends StatelessWidget {
         wobbleAmount: wobbleAmount,
         items: items,
         onChanged: onChanged,
+        controller: controller,
       ),
     );
   }
@@ -139,6 +151,7 @@ class _SliverNomoPageGridContent extends StatefulWidget {
   final double wobbleAmount;
   final Map<int, Widget> items;
   final void Function(Map<int, Widget> newItems)? onChanged;
+  final PageGridController? controller;
 
   const _SliverNomoPageGridContent({
     required this.rows,
@@ -148,6 +161,7 @@ class _SliverNomoPageGridContent extends StatefulWidget {
     required this.wobbleAmount,
     required this.items,
     required this.onChanged,
+    this.controller,
   });
 
   @override
@@ -169,7 +183,7 @@ class _SliverNomoPageGridContentState extends State<_SliverNomoPageGridContent> 
         _isHorizontalScrollActive = false;
       }
     }
-    
+
     return _isHorizontalScrollActive;
   }
 
@@ -189,6 +203,7 @@ class _SliverNomoPageGridContentState extends State<_SliverNomoPageGridContent> 
             height: widget.height,
             wobbleAmount: widget.wobbleAmount,
             onChanged: widget.onChanged,
+            controller: widget.controller,
           ),
         ),
       ),
@@ -222,6 +237,7 @@ class _NomoPageGrid extends StatefulWidget {
   final double wobbleAmount;
   final Map<int, Widget> items;
   final void Function(Map<int, Widget> newItems)? onChanged;
+  final PageGridController? controller;
   _NomoPageGrid({
     required this.rows,
     required this.columns,
@@ -231,6 +247,7 @@ class _NomoPageGrid extends StatefulWidget {
     required this.width,
     required this.height,
     required this.onChanged,
+    this.controller,
   }) : assert(height.isFinite && !height.isNegative, ""),
        assert(width.isFinite && !width.isNegative, "");
 
@@ -238,7 +255,9 @@ class _NomoPageGrid extends StatefulWidget {
   State<_NomoPageGrid> createState() => _NomoPageGridState();
 }
 
-class _NomoPageGridState extends State<_NomoPageGrid> {
+class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControllerState {
+  final GlobalKey _stackKey = GlobalKey();
+  
   late final PageGridNotifier pageGridNotifier = PageGridNotifier(
     viewportWidth: widget.width,
     viewportHeight: widget.height,
@@ -251,14 +270,50 @@ class _NomoPageGridState extends State<_NomoPageGrid> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    widget.controller?.attach(this);
+    pageGridNotifier.pageNotifier.addListener(_onPageChanged);
+  }
+
+  @override
   void dispose() {
+    pageGridNotifier.pageNotifier.removeListener(_onPageChanged);
+    widget.controller?.detach(this);
     pageGridNotifier.dispose();
     super.dispose();
+  }
+
+  void _onPageChanged() {
+    widget.controller?.notifyPageChanged();
+  }
+
+  @override
+  int get currentPage => pageGridNotifier.pageNotifier.value;
+
+  @override
+  int get pageCount => pageGridNotifier.pageCountNotifier.value;
+
+  @override
+  Future<void> animateToPage(int page, {required Duration duration, required Curve curve}) async {
+    final targetOffset = page * widget.width;
+    await pageGridNotifier.controller.animateTo(
+      targetOffset,
+      duration: duration,
+      curve: curve,
+    );
+  }
+
+  @override
+  void jumpToPage(int page) {
+    final targetOffset = page * widget.width;
+    pageGridNotifier.controller.jumpTo(targetOffset);
   }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
+      key: _stackKey,
       children: [
         ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(
@@ -288,6 +343,7 @@ class _NomoPageGridState extends State<_NomoPageGrid> {
                   return PageGridItem(
                     index: index,
                     pageGridNotifier: pageGridNotifier,
+                    gridStackKey: _stackKey,
                     child: item,
                   );
                 },
@@ -465,8 +521,9 @@ class InnerPageGridItem extends StatefulWidget {
   final ItemPageSpot state;
   final int index;
   final PageGridNotifier pageGridNotifier;
+  final GlobalKey gridStackKey;
 
-  const InnerPageGridItem(this.state, this.index, this.pageGridNotifier);
+  const InnerPageGridItem(this.state, this.index, this.pageGridNotifier, this.gridStackKey);
 
   @override
   State<InnerPageGridItem> createState() => _InnerPageGridItemState();
@@ -504,7 +561,16 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
         return DragTarget<int>(
           onAcceptWithDetails: (details) {
             disableAnimation = true;
-            widget.pageGridNotifier.onItemReceive(widget.index, details.data, details.offset);
+
+            // Convert global offset to local coordinates for consistency
+            Offset localOffset = details.offset;
+            
+            final RenderBox? gridStackBox = widget.gridStackKey.currentContext?.findRenderObject() as RenderBox?;
+            if (gridStackBox != null && gridStackBox.attached) {
+              localOffset = gridStackBox.globalToLocal(details.offset);
+            }
+
+            widget.pageGridNotifier.onItemReceive(widget.index, details.data, localOffset);
 
             Future.delayed(
               Duration(milliseconds: 200),
@@ -515,10 +581,20 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
           },
           onMove: (details) {
             if (widget.index == details.data) return;
+
+            // Convert global offset to local coordinates relative to the grid
+            // Use the grid Stack's RenderBox for accurate coordinate conversion
+            Offset localOffset = details.offset;
+            
+            final RenderBox? gridStackBox = widget.gridStackKey.currentContext?.findRenderObject() as RenderBox?;
+            if (gridStackBox != null && gridStackBox.attached) {
+              localOffset = gridStackBox.globalToLocal(details.offset);
+            }
+
             widget.pageGridNotifier.calcPreviewDisplacement(
               details.data,
               widget.index,
-              details.offset,
+              localOffset,
             );
           },
           onWillAcceptWithDetails: (details) {
@@ -567,11 +643,13 @@ class PageGridItem extends StatelessWidget {
   final int index;
   final Widget? child;
   final PageGridNotifier pageGridNotifier;
+  final GlobalKey gridStackKey;
 
   const PageGridItem({
     required this.index,
     required this.child,
     required this.pageGridNotifier,
+    required this.gridStackKey,
   });
 
   @override
@@ -581,7 +659,7 @@ class PageGridItem extends StatelessWidget {
       builder: (context, itemState, placeholer) {
         return switch (itemState) {
           EmptyPageSpot() => placeholer!,
-          ItemPageSpot itemState => InnerPageGridItem(itemState, index, pageGridNotifier),
+          ItemPageSpot itemState => InnerPageGridItem(itemState, index, pageGridNotifier, gridStackKey),
         };
       },
       child: DragTarget<int>(

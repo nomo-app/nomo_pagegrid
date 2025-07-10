@@ -44,6 +44,84 @@ NomoPageGrid(
 )
 ```
 
+### Using PageGridController
+
+```dart
+class MyGridScreen extends StatefulWidget {
+  @override
+  State<MyGridScreen> createState() => _MyGridScreenState();
+}
+
+class _MyGridScreenState extends State<MyGridScreen> {
+  final PageGridController controller = PageGridController();
+  
+  @override
+  void initState() {
+    super.initState();
+    // Listen to page changes
+    controller.addListener(() {
+      print('Current page: ${controller.currentPage}');
+    });
+  }
+  
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Navigation controls
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () => controller.previousPage(),
+            ),
+            IconButton(
+              icon: Icon(Icons.arrow_forward),
+              onPressed: () => controller.nextPage(),
+            ),
+          ],
+        ),
+        // Grid with controller
+        Expanded(
+          child: NomoPageGrid(
+            controller: controller,
+            rows: 4,
+            columns: 4,
+            itemSize: Size(80, 80),
+            items: items,
+            onChanged: (newItems) {
+              setState(() {
+                items = newItems;
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+```
+
+#### PageGridController Methods
+
+- `nextPage()`: Navigate to the next page with default animation
+- `previousPage()`: Navigate to the previous page with default animation
+- `animateToPage(int page, {Duration duration, Curve curve})`: Animate to a specific page
+- `jumpToPage(int page)`: Jump to a page without animation
+
+#### PageGridController Properties
+
+- `currentPage`: The current page index
+- `pageCount`: Total number of pages
+- `hasClients`: Whether the controller is attached to a grid
+
 ### SliverNomoPageGrid in CustomScrollView
 
 ```dart
