@@ -589,7 +589,6 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
             final RenderBox? gridStackBox = widget.gridStackKey.currentContext?.findRenderObject() as RenderBox?;
             if (gridStackBox != null && gridStackBox.attached) {
               localOffset = gridStackBox.globalToLocal(details.offset);
-              print('Converted: global ${details.offset} -> local $localOffset (grid size: ${gridStackBox.size})');
             }
 
             widget.pageGridNotifier.calcPreviewDisplacement(
@@ -997,8 +996,6 @@ final class PageGridNotifier {
 
   PushDirection _calculateEvasionDirectionFromHover(Offset hoverOffset, int index) {
     hoverOffset = hoverOffset.translate(itemSize.width / 2, itemSize.height / 2);
-
-    print(hoverOffset);
 
     final page = index ~/ childrenPerPage;
 
