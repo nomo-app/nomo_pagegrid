@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/gestures.dart';
@@ -7,6 +8,8 @@ import 'package:flutter/rendering.dart';
 import 'src/page_grid_controller.dart';
 import 'src/page_grid_controller_state.dart';
 export 'src/page_grid_controller.dart';
+
+enum EdgeNavigationState { left, right }
 
 class NomoPageGrid extends StatelessWidget {
   final int rows;
@@ -361,9 +364,14 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
             listenable: Listenable.merge([
               pageGridNotifier.isDragging,
               pageGridNotifier.pageNotifier,
+              pageGridNotifier.pageCountNotifier,
             ]),
             builder: (context, child) {
-              if (pageGridNotifier.pageNotifier.value >= pageGridNotifier.maxPages - 1) {
+              final currentPage = pageGridNotifier.pageNotifier.value;
+              final totalPages = pageGridNotifier.pageCountNotifier.value;
+              final isLastPage = currentPage >= totalPages - 1;
+              
+              if (isLastPage) {
                 return SizedBox.shrink();
               }
               return AnimatedSwitcher(
@@ -391,6 +399,7 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
             listenable: Listenable.merge([
               pageGridNotifier.isDragging,
               pageGridNotifier.pageNotifier,
+              pageGridNotifier.pageCountNotifier,
             ]),
             builder: (context, child) {
               if (pageGridNotifier.pageNotifier.value <= 0) return SizedBox.shrink();
@@ -762,6 +771,7 @@ DirectionCompatibility getDirectionCompatibility(
 
 typedef Position = ({int x, int y});
 
+/// Manages the state and logic for the page grid widget
 final class PageGridNotifier {
   final int rows;
   final int columns;
@@ -826,14 +836,18 @@ final class PageGridNotifier {
 
   int maxPages = 3;
 
-  bool _enteredRightSide = false;
-  bool _enteredLeftSide = false;
+  Timer? _edgeNavigationTimer;
+  EdgeNavigationState? _currentEdgeState;
+  
+  static const Duration _initialNavigationDelay = Duration(milliseconds: 600);
+  static const Duration _repeatNavigationDelay = Duration(milliseconds: 400);
 
   void addPage() {
     // TODO: addpage
   }
 
   void dispose() {
+    _stopEdgeNavigation();
     pageNotifier.dispose();
     isDragging.dispose();
     controller
@@ -858,6 +872,7 @@ final class PageGridNotifier {
   }
 
   void dragEnded() {
+    _stopEdgeNavigation();
     isDragging.value = false;
     clearDisplacementPreview();
   }
@@ -1203,46 +1218,77 @@ final class PageGridNotifier {
     return pageStartIndex + newRow * columns + newCol;
   }
 
+  void _startEdgeNavigation(EdgeNavigationState edge) {
+    _currentEdgeState = edge;
+    
+    // Initial navigation after delay
+    _edgeNavigationTimer = Timer(_initialNavigationDelay, () {
+      _navigateToEdge();
+      
+      // Setup repeating navigation
+      _edgeNavigationTimer = Timer.periodic(_repeatNavigationDelay, (_) {
+        _navigateToEdge();
+      });
+    });
+  }
+  
+  void _stopEdgeNavigation() {
+    _edgeNavigationTimer?.cancel();
+    _edgeNavigationTimer = null;
+    _currentEdgeState = null;
+  }
+  
+  void _navigateToEdge() {
+    if (_currentEdgeState == null) return;
+    
+    final currentPage = pageNotifier.value;
+    final maxPage = pageCountNotifier.value - 1;
+    
+    if (_currentEdgeState == EdgeNavigationState.right && currentPage < maxPage) {
+      controller.animateTo(
+        controller.offset + viewportWidth,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.fastOutSlowIn,
+      );
+    } else if (_currentEdgeState == EdgeNavigationState.left && currentPage > 0) {
+      controller.animateTo(
+        controller.offset - viewportWidth,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.fastOutSlowIn,
+      );
+    } else {
+      // Stop navigation if we've reached the boundary
+      _stopEdgeNavigation();
+    }
+  }
+
   void onChildDragUpdate(DragUpdateDetails dragUpdate) {
     final globalOffset = dragUpdate.globalPosition;
-
-    if (viewportWidth - globalOffset.dx < 32) {
-      if (_enteredRightSide) return;
-      _enteredRightSide = true;
-      Future.delayed(
-        const Duration(seconds: 1),
-        () {
-          if (_enteredRightSide) {
-            controller.animateTo(
-              controller.offset + viewportWidth,
-              duration: const Duration(milliseconds: 140),
-              curve: Curves.fastOutSlowIn,
-            );
-          }
-        },
-      );
-      return;
+    
+    // Edge detection zones: 32px for activation
+    const edgeZone = 32.0;
+    // Hysteresis zone: 40px to prevent oscillation
+    const hysteresisZone = 40.0;
+    
+    final isInRightEdge = viewportWidth - globalOffset.dx < edgeZone;
+    final isInLeftEdge = globalOffset.dx < edgeZone;
+    final isOutsideHysteresis = globalOffset.dx > hysteresisZone && 
+                                globalOffset.dx < viewportWidth - hysteresisZone;
+    
+    if (isInRightEdge) {
+      if (_currentEdgeState != EdgeNavigationState.right) {
+        _stopEdgeNavigation();
+        _startEdgeNavigation(EdgeNavigationState.right);
+      }
+    } else if (isInLeftEdge) {
+      if (_currentEdgeState != EdgeNavigationState.left) {
+        _stopEdgeNavigation();
+        _startEdgeNavigation(EdgeNavigationState.left);
+      }
+    } else if (isOutsideHysteresis && _currentEdgeState != null) {
+      // Only stop navigation when clearly outside the hysteresis zone
+      _stopEdgeNavigation();
     }
-
-    if (globalOffset.dx < 32) {
-      if (_enteredLeftSide) return;
-      _enteredLeftSide = true;
-      Future.delayed(
-        const Duration(seconds: 1),
-        () {
-          if (_enteredLeftSide) {
-            controller.animateTo(
-              controller.offset - viewportWidth,
-              duration: const Duration(milliseconds: 140),
-              curve: Curves.fastOutSlowIn,
-            );
-          }
-        },
-      );
-      return;
-    }
-    _enteredLeftSide = false;
-    _enteredRightSide = false;
   }
 }
 
