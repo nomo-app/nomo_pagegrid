@@ -89,25 +89,25 @@ class NomoPageGrid extends StatelessWidget {
 class SliverNomoPageGrid extends StatelessWidget {
   /// Number of rows in the grid
   final int rows;
-  
+
   /// Number of columns in the grid
   final int columns;
-  
+
   /// Size of each item in the grid
   final Size itemSize;
-  
+
   /// Required height of the sliver widget
   final double? height;
-  
+
   /// Amount of wobble effect when items are displaced (default: 3)
   final double wobbleAmount;
-  
+
   /// Map of items where key is the position index and value is the widget
   final Map<int, Widget> items;
-  
+
   /// Callback when items are reordered through drag-and-drop
   final void Function(Map<int, Widget> newItems)? onChanged;
-  
+
   /// Optional controller for programmatic page navigation
   final PageGridController? controller;
 
@@ -121,10 +121,10 @@ class SliverNomoPageGrid extends StatelessWidget {
     this.wobbleAmount = 3,
     this.onChanged,
     this.controller,
-  })  : assert(
-          height != null && height > 0,
-          'SliverNomoPageGrid requires a positive height value',
-        );
+  }) : assert(
+         height != null && height > 0,
+         'SliverNomoPageGrid requires a positive height value',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +183,7 @@ class _SliverNomoPageGridContentState extends State<_SliverNomoPageGridContent> 
         _isHorizontalScrollActive = false;
       }
     }
-    
+
     return _isHorizontalScrollActive;
   }
 
@@ -256,6 +256,8 @@ class _NomoPageGrid extends StatefulWidget {
 }
 
 class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControllerState {
+  final GlobalKey _stackKey = GlobalKey();
+  
   late final PageGridNotifier pageGridNotifier = PageGridNotifier(
     viewportWidth: widget.width,
     viewportHeight: widget.height,
@@ -311,6 +313,7 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
   @override
   Widget build(BuildContext context) {
     return Stack(
+      key: _stackKey,
       children: [
         ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(
@@ -340,6 +343,7 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
                   return PageGridItem(
                     index: index,
                     pageGridNotifier: pageGridNotifier,
+                    gridStackKey: _stackKey,
                     child: item,
                   );
                 },
@@ -517,8 +521,9 @@ class InnerPageGridItem extends StatefulWidget {
   final ItemPageSpot state;
   final int index;
   final PageGridNotifier pageGridNotifier;
+  final GlobalKey gridStackKey;
 
-  const InnerPageGridItem(this.state, this.index, this.pageGridNotifier);
+  const InnerPageGridItem(this.state, this.index, this.pageGridNotifier, this.gridStackKey);
 
   @override
   State<InnerPageGridItem> createState() => _InnerPageGridItemState();
@@ -556,23 +561,15 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
         return DragTarget<int>(
           onAcceptWithDetails: (details) {
             disableAnimation = true;
-            
+
             // Convert global offset to local coordinates for consistency
-            final RenderBox? currentBox = context.findRenderObject() as RenderBox?;
             Offset localOffset = details.offset;
             
-            if (currentBox != null) {
-              RenderObject? ancestor = currentBox.parent;
-              while (ancestor != null && ancestor is! RenderSliverGrid) {
-                ancestor = ancestor.parent;
-              }
-              
-              if (ancestor != null && ancestor.parent is RenderBox) {
-                final gridBox = ancestor.parent as RenderBox;
-                localOffset = gridBox.globalToLocal(details.offset);
-              }
+            final RenderBox? gridStackBox = widget.gridStackKey.currentContext?.findRenderObject() as RenderBox?;
+            if (gridStackBox != null && gridStackBox.attached) {
+              localOffset = gridStackBox.globalToLocal(details.offset);
             }
-            
+
             widget.pageGridNotifier.onItemReceive(widget.index, details.data, localOffset);
 
             Future.delayed(
@@ -584,26 +581,17 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
           },
           onMove: (details) {
             if (widget.index == details.data) return;
-            
+
             // Convert global offset to local coordinates relative to the grid
-            // We need to find the GridView's RenderBox to properly convert coordinates
-            final RenderBox? currentBox = context.findRenderObject() as RenderBox?;
+            // Use the grid Stack's RenderBox for accurate coordinate conversion
             Offset localOffset = details.offset;
             
-            if (currentBox != null) {
-              // Find the ancestor GridView's RenderBox
-              RenderObject? ancestor = currentBox.parent;
-              while (ancestor != null && ancestor is! RenderSliverGrid) {
-                ancestor = ancestor.parent;
-              }
-              
-              // If we found the grid, get its containing RenderBox (usually in the viewport)
-              if (ancestor != null && ancestor.parent is RenderBox) {
-                final gridBox = ancestor.parent as RenderBox;
-                localOffset = gridBox.globalToLocal(details.offset);
-              }
+            final RenderBox? gridStackBox = widget.gridStackKey.currentContext?.findRenderObject() as RenderBox?;
+            if (gridStackBox != null && gridStackBox.attached) {
+              localOffset = gridStackBox.globalToLocal(details.offset);
+              print('Converted: global ${details.offset} -> local $localOffset (grid size: ${gridStackBox.size})');
             }
-            
+
             widget.pageGridNotifier.calcPreviewDisplacement(
               details.data,
               widget.index,
@@ -656,11 +644,13 @@ class PageGridItem extends StatelessWidget {
   final int index;
   final Widget? child;
   final PageGridNotifier pageGridNotifier;
+  final GlobalKey gridStackKey;
 
   const PageGridItem({
     required this.index,
     required this.child,
     required this.pageGridNotifier,
+    required this.gridStackKey,
   });
 
   @override
@@ -670,7 +660,7 @@ class PageGridItem extends StatelessWidget {
       builder: (context, itemState, placeholer) {
         return switch (itemState) {
           EmptyPageSpot() => placeholer!,
-          ItemPageSpot itemState => InnerPageGridItem(itemState, index, pageGridNotifier),
+          ItemPageSpot itemState => InnerPageGridItem(itemState, index, pageGridNotifier, gridStackKey),
         };
       },
       child: DragTarget<int>(
@@ -1007,6 +997,8 @@ final class PageGridNotifier {
 
   PushDirection _calculateEvasionDirectionFromHover(Offset hoverOffset, int index) {
     hoverOffset = hoverOffset.translate(itemSize.width / 2, itemSize.height / 2);
+
+    print(hoverOffset);
 
     final page = index ~/ childrenPerPage;
 

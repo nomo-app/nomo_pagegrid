@@ -99,12 +99,12 @@ class _NormalGridScreenState extends State<NormalGridScreen> {
       2: _buildItem(Colors.deepOrange, '2'),
       3: _buildItem(Colors.blue, '3'),
       4: _buildItem(Colors.cyan, '4'),
-      5: _buildItem(Colors.green, '5'),
-      6: _buildItem(Colors.greenAccent, '6'),
-      7: _buildItem(Colors.deepPurple, '7'),
-      8: _buildItem(Colors.blueAccent, '8'),
-      9: _buildItem(Colors.pink, '9'),
-      10: _buildItem(Colors.amber, '10'),
+      // 5: _buildItem(Colors.green, '5'),
+      // 6: _buildItem(Colors.greenAccent, '6'),
+      // 7: _buildItem(Colors.deepPurple, '7'),
+      // 8: _buildItem(Colors.blueAccent, '8'),
+      // 9: _buildItem(Colors.pink, '9'),
+      // 10: _buildItem(Colors.amber, '10'),
       11: _buildItem(Colors.teal, '11'),
       32: _buildItem(Colors.lime, '32'),
       33: _buildItem(Colors.indigo, '33'),
@@ -132,15 +132,15 @@ class _NormalGridScreenState extends State<NormalGridScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Normal NomoPageGrid'),
-      ),
+      // appBar: AppBar(
+      //   title: const Text('Normal NomoPageGrid'),
+      // ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: NomoPageGrid(
           rows: 4,
           columns: 4,
-          itemSize: const Size(80, 80),
+          itemSize: const Size(64, 64),
           wobbleAmount: 3,
           onChanged: (newItems) {
             setState(() {
@@ -322,19 +322,42 @@ class _ControllerGridScreenState extends State<ControllerGridScreen> {
 
   Map<int, Widget> _generateItems() {
     final colors = [
-      Colors.red, Colors.yellow, Colors.deepOrange, Colors.blue,
-      Colors.cyan, Colors.green, Colors.greenAccent, Colors.deepPurple,
-      Colors.blueAccent, Colors.pink, Colors.amber, Colors.teal,
-      Colors.lime, Colors.indigo, Colors.orange, Colors.purple,
-      Colors.brown, Colors.grey, Colors.lightBlue, Colors.lightGreen,
-      Colors.redAccent, Colors.yellowAccent, Colors.orangeAccent, Colors.blueGrey,
-      Colors.deepOrangeAccent, Colors.pinkAccent, Colors.purpleAccent, Colors.indigoAccent,
-      Colors.cyanAccent, Colors.lightBlueAccent, Colors.lightGreenAccent, Colors.amberAccent,
+      Colors.red,
+      Colors.yellow,
+      Colors.deepOrange,
+      Colors.blue,
+      Colors.cyan,
+      Colors.green,
+      Colors.greenAccent,
+      Colors.deepPurple,
+      Colors.blueAccent,
+      Colors.pink,
+      Colors.amber,
+      Colors.teal,
+      Colors.lime,
+      Colors.indigo,
+      Colors.orange,
+      Colors.purple,
+      Colors.brown,
+      Colors.grey,
+      Colors.lightBlue,
+      Colors.lightGreen,
+      Colors.redAccent,
+      Colors.yellowAccent,
+      Colors.orangeAccent,
+      Colors.blueGrey,
+      Colors.deepOrangeAccent,
+      Colors.pinkAccent,
+      Colors.purpleAccent,
+      Colors.indigoAccent,
+      Colors.cyanAccent,
+      Colors.lightBlueAccent,
+      Colors.lightGreenAccent,
+      Colors.amberAccent,
     ];
-    
+
     return {
-      for (int i = 0; i < colors.length; i++)
-        i: _buildItem(colors[i], '$i'),
+      for (int i = 0; i < colors.length; i++) i: _buildItem(colors[i], '$i'),
     };
   }
 
@@ -386,9 +409,7 @@ class _ControllerGridScreenState extends State<ControllerGridScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton.icon(
-                      onPressed: currentPage > 0
-                          ? () => controller.previousPage()
-                          : null,
+                      onPressed: currentPage > 0 ? () => controller.previousPage() : null,
                       icon: const Icon(Icons.arrow_back),
                       label: const Text('Previous'),
                     ),
@@ -412,10 +433,10 @@ class _ControllerGridScreenState extends State<ControllerGridScreen> {
                     ElevatedButton(
                       onPressed: controller.hasClients && controller.pageCount > 0
                           ? () => controller.animateToPage(
-                                controller.pageCount - 1,
-                                duration: const Duration(milliseconds: 800),
-                                curve: Curves.easeInOutCubic,
-                              )
+                              controller.pageCount - 1,
+                              duration: const Duration(milliseconds: 800),
+                              curve: Curves.easeInOutCubic,
+                            )
                           : null,
                       child: const Text('Animate to Last'),
                     ),
