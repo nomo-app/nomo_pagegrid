@@ -154,3 +154,5 @@ linux/
 windows/
 web/
 macos/
+
+features/*
