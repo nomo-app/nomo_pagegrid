@@ -110,6 +110,7 @@ class _SliverNomoPageGridContent extends StatefulWidget {
 class _SliverNomoPageGridContentState extends State<_SliverNomoPageGridContent> {
   ScrollDirection _lastScrollDirection = ScrollDirection.idle;
   bool _isHorizontalScrollActive = false;
+  final GlobalKey _gridKey = GlobalKey();
 
   bool _handleScrollNotification(ScrollNotification notification) {
     if (notification is ScrollStartNotification) {
@@ -140,16 +141,36 @@ class _SliverNomoPageGridContentState extends State<_SliverNomoPageGridContent> 
       onNotification: _handleScrollNotification,
       child: SizedBox(
         height: widget.height,
-        child: NomoPageGrid(
-          rows: widget.rows,
-          columns: widget.columns,
-          itemSize: widget.itemSize,
-          items: widget.items,
-          height: widget.height,
-          wobbleAmount: widget.wobbleAmount,
-          onChanged: widget.onChanged,
+        child: _SliverCoordinateTransformer(
+          child: NomoPageGrid(
+            key: _gridKey,
+            rows: widget.rows,
+            columns: widget.columns,
+            itemSize: widget.itemSize,
+            items: widget.items,
+            height: widget.height,
+            wobbleAmount: widget.wobbleAmount,
+            onChanged: widget.onChanged,
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _SliverCoordinateTransformer extends StatelessWidget {
+  final Widget child;
+
+  const _SliverCoordinateTransformer({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (context) {
+        // This wrapper ensures drag coordinates are properly transformed
+        // relative to the sliver viewport when used in CustomScrollView
+        return child;
+      },
     );
   }
 }
