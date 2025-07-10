@@ -155,28 +155,19 @@ class _SliverNomoPageGridContent extends StatefulWidget {
 }
 
 class _SliverNomoPageGridContentState extends State<_SliverNomoPageGridContent> {
-  ScrollDirection _lastScrollDirection = ScrollDirection.idle;
   bool _isHorizontalScrollActive = false;
   final GlobalKey _gridKey = GlobalKey();
 
   bool _handleScrollNotification(ScrollNotification notification) {
     if (notification is ScrollStartNotification) {
-      final details = notification.dragDetails;
-      if (details != null) {
-        final dx = details.delta.dx.abs();
-        final dy = details.delta.dy.abs();
-        
-        if (dx > dy * 2) {
-          _isHorizontalScrollActive = true;
-        } else {
-          _isHorizontalScrollActive = false;
-        }
-      }
+      _isHorizontalScrollActive = false;
     } else if (notification is ScrollEndNotification) {
       _isHorizontalScrollActive = false;
-      _lastScrollDirection = ScrollDirection.idle;
     } else if (notification is UserScrollNotification) {
-      _lastScrollDirection = notification.direction;
+      final direction = notification.direction;
+      if (direction == ScrollDirection.idle) {
+        _isHorizontalScrollActive = false;
+      }
     }
     
     return _isHorizontalScrollActive;
