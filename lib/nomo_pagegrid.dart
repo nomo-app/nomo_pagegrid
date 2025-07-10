@@ -257,7 +257,7 @@ class _NomoPageGrid extends StatefulWidget {
 
 class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControllerState {
   final GlobalKey _stackKey = GlobalKey();
-  
+
   late final PageGridNotifier pageGridNotifier = PageGridNotifier(
     viewportWidth: widget.width,
     viewportHeight: widget.height,
@@ -544,7 +544,7 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
             _ => Offset.zero,
           },
           child: AnimatedContainer(
-            duration: disableAnimation ? Duration.zero : const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 200),
             curve: Curves.ease,
             transform: switch (widget.state) {
               EvadingPageSpot evading => Matrix4.translationValues(
@@ -564,8 +564,9 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
 
             // Convert global offset to local coordinates for consistency
             Offset localOffset = details.offset;
-            
-            final RenderBox? gridStackBox = widget.gridStackKey.currentContext?.findRenderObject() as RenderBox?;
+
+            final RenderBox? gridStackBox =
+                widget.gridStackKey.currentContext?.findRenderObject() as RenderBox?;
             if (gridStackBox != null && gridStackBox.attached) {
               localOffset = gridStackBox.globalToLocal(details.offset);
             }
@@ -585,8 +586,9 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
             // Convert global offset to local coordinates relative to the grid
             // Use the grid Stack's RenderBox for accurate coordinate conversion
             Offset localOffset = details.offset;
-            
-            final RenderBox? gridStackBox = widget.gridStackKey.currentContext?.findRenderObject() as RenderBox?;
+
+            final RenderBox? gridStackBox =
+                widget.gridStackKey.currentContext?.findRenderObject() as RenderBox?;
             if (gridStackBox != null && gridStackBox.attached) {
               localOffset = gridStackBox.globalToLocal(details.offset);
             }
@@ -659,7 +661,12 @@ class PageGridItem extends StatelessWidget {
       builder: (context, itemState, placeholer) {
         return switch (itemState) {
           EmptyPageSpot() => placeholer!,
-          ItemPageSpot itemState => InnerPageGridItem(itemState, index, pageGridNotifier, gridStackKey),
+          ItemPageSpot itemState => InnerPageGridItem(
+            itemState,
+            index,
+            pageGridNotifier,
+            gridStackKey,
+          ),
         };
       },
       child: DragTarget<int>(
