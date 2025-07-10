@@ -34,6 +34,8 @@ Follow these steps to create a comprehensive architectural design:
 6. **Create Feature Branch**
    - Generate appropriate branch name (e.g., feature/component-name)
    - Use `git checkout -b` to create the branch
+   - Create an initial Commit before creating the Pull Request
+   - Switch back to master branch 
 
 7. **Create Pull Request**
    - Use `gh pr create` with comprehensive PR description
