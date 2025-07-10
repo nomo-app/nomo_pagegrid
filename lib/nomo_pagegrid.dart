@@ -45,13 +45,60 @@ class NomoPageGrid extends StatelessWidget {
   }
 }
 
+/// A sliver version of [NomoPageGrid] that can be used within [CustomScrollView]
+/// and other sliver-based scrollable widgets.
+///
+/// This widget wraps the standard [NomoPageGrid] in a [SliverToBoxAdapter],
+/// making it compatible with sliver layouts while maintaining all the
+/// drag-and-drop functionality of the original widget.
+///
+/// The [height] parameter is required for sliver context to properly
+/// size the widget along the scroll axis.
+///
+/// Example usage:
+/// ```dart
+/// CustomScrollView(
+///   slivers: [
+///     SliverAppBar(title: Text('My App')),
+///     SliverNomoPageGrid(
+///       rows: 3,
+///       columns: 3,
+///       itemSize: Size(64, 64),
+///       height: 400,
+///       items: {
+///         0: Container(color: Colors.red),
+///         1: Container(color: Colors.blue),
+///       },
+///       onChanged: (newItems) => setState(() => items = newItems),
+///     ),
+///     SliverList(
+///       delegate: SliverChildBuilderDelegate(
+///         (context, index) => ListTile(title: Text('Item $index')),
+///       ),
+///     ),
+///   ],
+/// )
+/// ```
 class SliverNomoPageGrid extends StatelessWidget {
+  /// Number of rows in the grid
   final int rows;
+  
+  /// Number of columns in the grid
   final int columns;
+  
+  /// Size of each item in the grid
   final Size itemSize;
+  
+  /// Required height of the sliver widget
   final double? height;
+  
+  /// Amount of wobble effect when items are displaced (default: 3)
   final double wobbleAmount;
+  
+  /// Map of items where key is the position index and value is the widget
   final Map<int, Widget> items;
+  
+  /// Callback when items are reordered through drag-and-drop
   final void Function(Map<int, Widget> newItems)? onChanged;
 
   const SliverNomoPageGrid({
