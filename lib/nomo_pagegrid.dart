@@ -556,7 +556,24 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
         return DragTarget<int>(
           onAcceptWithDetails: (details) {
             disableAnimation = true;
-            widget.pageGridNotifier.onItemReceive(widget.index, details.data, details.offset);
+            
+            // Convert global offset to local coordinates for consistency
+            final RenderBox? currentBox = context.findRenderObject() as RenderBox?;
+            Offset localOffset = details.offset;
+            
+            if (currentBox != null) {
+              RenderObject? ancestor = currentBox.parent;
+              while (ancestor != null && ancestor is! RenderSliverGrid) {
+                ancestor = ancestor.parent;
+              }
+              
+              if (ancestor != null && ancestor.parent is RenderBox) {
+                final gridBox = ancestor.parent as RenderBox;
+                localOffset = gridBox.globalToLocal(details.offset);
+              }
+            }
+            
+            widget.pageGridNotifier.onItemReceive(widget.index, details.data, localOffset);
 
             Future.delayed(
               Duration(milliseconds: 200),
@@ -567,10 +584,30 @@ class _InnerPageGridItemState extends State<InnerPageGridItem> {
           },
           onMove: (details) {
             if (widget.index == details.data) return;
+            
+            // Convert global offset to local coordinates relative to the grid
+            // We need to find the GridView's RenderBox to properly convert coordinates
+            final RenderBox? currentBox = context.findRenderObject() as RenderBox?;
+            Offset localOffset = details.offset;
+            
+            if (currentBox != null) {
+              // Find the ancestor GridView's RenderBox
+              RenderObject? ancestor = currentBox.parent;
+              while (ancestor != null && ancestor is! RenderSliverGrid) {
+                ancestor = ancestor.parent;
+              }
+              
+              // If we found the grid, get its containing RenderBox (usually in the viewport)
+              if (ancestor != null && ancestor.parent is RenderBox) {
+                final gridBox = ancestor.parent as RenderBox;
+                localOffset = gridBox.globalToLocal(details.offset);
+              }
+            }
+            
             widget.pageGridNotifier.calcPreviewDisplacement(
               details.data,
               widget.index,
-              details.offset,
+              localOffset,
             );
           },
           onWillAcceptWithDetails: (details) {
