@@ -315,9 +315,11 @@ class _ControllerGridScreenState extends State<ControllerGridScreen> {
   }
 
   void _onControllerChanged() {
-    setState(() {
-      currentPage = controller.currentPage;
-    });
+    if (mounted) {
+      setState(() {
+        currentPage = controller.currentPage;
+      });
+    }
   }
 
   Map<int, Widget> _generateItems() {

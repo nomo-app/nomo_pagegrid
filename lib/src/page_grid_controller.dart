@@ -107,8 +107,10 @@ class PageGridController extends ChangeNotifier {
   void attach(PageGridControllerState state) {
     assert(_state == null, 'PageGridController already attached to a grid');
     _state = state;
-    // Notify listeners when attached to sync initial state
-    notifyListeners();
+    // Defer initial notification to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
   
   @internal
