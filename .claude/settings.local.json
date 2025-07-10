@@ -12,7 +12,8 @@
       "Bash(flutter analyze:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }
