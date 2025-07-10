@@ -34,6 +34,8 @@ Follow these steps to create a comprehensive architectural design:
 6. **Create Feature Branch**
    - Generate appropriate branch name (e.g., feature/component-name)
    - Use `git checkout -b` to create the branch
+   - Create an initial Commit before creating the Pull Request
+   - Push the branch to origin
 
 7. **Create Pull Request**
    - Use `gh pr create` with comprehensive PR description
@@ -41,8 +43,10 @@ Follow these steps to create a comprehensive architectural design:
    - Add task checklist for implementation
    - Include test plan
    - Note the PR number for worktree creation
+   - Switch back to master branch 
 
 8. **Create Git Worktree**
+   - Ensure on master branch
    - Extract PR number from the created PR
    - Create a worktree for isolated development:
      ```bash
@@ -54,7 +58,7 @@ Follow these steps to create a comprehensive architectural design:
      cd ./features/$(basename $(pwd))-pr-<PR_NUMBER> && claude
      ```
 
-9. **Documentation**
+9.  **Documentation**
    - Update CLAUDE.md if needed for future reference
    - Consider if README updates are needed
    - Document any new patterns introduced
