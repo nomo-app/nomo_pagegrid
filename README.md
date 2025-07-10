@@ -1,39 +1,109 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# NomoPageGrid
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+A Flutter package that provides a custom grid widget with drag-and-drop functionality and page-based navigation. The package allows items to be dragged between positions with smooth displacement animations.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- **Drag-and-drop** functionality with long press
+- **Page-based navigation** for grids with many items
+- **Smooth displacement animations** when dragging items
+- **Wobble effect** for displaced items
+- **Customizable** grid dimensions and item sizes
+- **SliverNomoPageGrid** for use in CustomScrollView
+- **Auto-scroll** at edges when dragging
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Add this to your package's `pubspec.yaml` file:
+
+```yaml
+dependencies:
+  nomo_pagegrid: ^1.0.0
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+### Basic NomoPageGrid
 
 ```dart
-const like = 'sample';
+NomoPageGrid(
+  rows: 4,
+  columns: 4,
+  itemSize: Size(80, 80),
+  items: {
+    0: Container(color: Colors.red),
+    1: Container(color: Colors.blue),
+    2: Container(color: Colors.green),
+    // Add more items...
+  },
+  onChanged: (newItems) {
+    setState(() {
+      items = newItems;
+    });
+  },
+)
 ```
+
+### SliverNomoPageGrid in CustomScrollView
+
+```dart
+CustomScrollView(
+  slivers: [
+    SliverAppBar(
+      title: Text('My App'),
+      pinned: true,
+    ),
+    SliverNomoPageGrid(
+      rows: 3,
+      columns: 4,
+      itemSize: Size(80, 80),
+      height: 300, // Required for sliver
+      items: {
+        0: Container(color: Colors.red),
+        1: Container(color: Colors.blue),
+        // Add more items...
+      },
+      onChanged: (newItems) {
+        setState(() {
+          items = newItems;
+        });
+      },
+    ),
+    SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => ListTile(
+          title: Text('Item $index'),
+        ),
+        childCount: 20,
+      ),
+    ),
+  ],
+)
+```
+
+## Parameters
+
+### NomoPageGrid
+
+- `rows` (required): Number of rows in the grid
+- `columns` (required): Number of columns in the grid
+- `itemSize` (required): Size of each item in the grid
+- `items` (required): Map of items where key is position index
+- `width`: Optional width (uses available width if not specified)
+- `height`: Optional height (uses available height if not specified)
+- `wobbleAmount`: Amount of wobble effect (default: 3)
+- `onChanged`: Callback when items are reordered
+
+### SliverNomoPageGrid
+
+Same as NomoPageGrid with these differences:
+- `height` (required): Height of the sliver widget
+- `width` is not available (uses full available width)
+
+## Example
+
+See the `/example` folder for a complete example app demonstrating both NomoPageGrid and SliverNomoPageGrid.
 
 ## Additional information
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+For more information, bug reports, or feature requests, please visit the [GitHub repository](https://github.com/nomo-app/nomo_pagegrid).

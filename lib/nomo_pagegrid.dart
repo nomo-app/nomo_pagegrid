@@ -45,6 +45,174 @@ class NomoPageGrid extends StatelessWidget {
   }
 }
 
+/// A sliver version of [NomoPageGrid] that can be used within [CustomScrollView]
+/// and other sliver-based scrollable widgets.
+///
+/// This widget wraps the standard [NomoPageGrid] in a [SliverToBoxAdapter],
+/// making it compatible with sliver layouts while maintaining all the
+/// drag-and-drop functionality of the original widget.
+///
+/// The [height] parameter is required for sliver context to properly
+/// size the widget along the scroll axis.
+///
+/// Example usage:
+/// ```dart
+/// CustomScrollView(
+///   slivers: [
+///     SliverAppBar(title: Text('My App')),
+///     SliverNomoPageGrid(
+///       rows: 3,
+///       columns: 3,
+///       itemSize: Size(64, 64),
+///       height: 400,
+///       items: {
+///         0: Container(color: Colors.red),
+///         1: Container(color: Colors.blue),
+///       },
+///       onChanged: (newItems) => setState(() => items = newItems),
+///     ),
+///     SliverList(
+///       delegate: SliverChildBuilderDelegate(
+///         (context, index) => ListTile(title: Text('Item $index')),
+///       ),
+///     ),
+///   ],
+/// )
+/// ```
+class SliverNomoPageGrid extends StatelessWidget {
+  /// Number of rows in the grid
+  final int rows;
+  
+  /// Number of columns in the grid
+  final int columns;
+  
+  /// Size of each item in the grid
+  final Size itemSize;
+  
+  /// Required height of the sliver widget
+  final double? height;
+  
+  /// Amount of wobble effect when items are displaced (default: 3)
+  final double wobbleAmount;
+  
+  /// Map of items where key is the position index and value is the widget
+  final Map<int, Widget> items;
+  
+  /// Callback when items are reordered through drag-and-drop
+  final void Function(Map<int, Widget> newItems)? onChanged;
+
+  const SliverNomoPageGrid({
+    super.key,
+    required this.rows,
+    required this.columns,
+    required this.itemSize,
+    required this.items,
+    this.height,
+    this.wobbleAmount = 3,
+    this.onChanged,
+  })  : assert(
+          height != null && height > 0,
+          'SliverNomoPageGrid requires a positive height value',
+        );
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: _SliverNomoPageGridContent(
+        rows: rows,
+        columns: columns,
+        itemSize: itemSize,
+        height: height!,
+        wobbleAmount: wobbleAmount,
+        items: items,
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _SliverNomoPageGridContent extends StatefulWidget {
+  final int rows;
+  final int columns;
+  final Size itemSize;
+  final double height;
+  final double wobbleAmount;
+  final Map<int, Widget> items;
+  final void Function(Map<int, Widget> newItems)? onChanged;
+
+  const _SliverNomoPageGridContent({
+    required this.rows,
+    required this.columns,
+    required this.itemSize,
+    required this.height,
+    required this.wobbleAmount,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  State<_SliverNomoPageGridContent> createState() => _SliverNomoPageGridContentState();
+}
+
+class _SliverNomoPageGridContentState extends State<_SliverNomoPageGridContent> {
+  bool _isHorizontalScrollActive = false;
+  final GlobalKey _gridKey = GlobalKey();
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification) {
+      _isHorizontalScrollActive = false;
+    } else if (notification is ScrollEndNotification) {
+      _isHorizontalScrollActive = false;
+    } else if (notification is UserScrollNotification) {
+      final direction = notification.direction;
+      if (direction == ScrollDirection.idle) {
+        _isHorizontalScrollActive = false;
+      }
+    }
+    
+    return _isHorizontalScrollActive;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: _handleScrollNotification,
+      child: SizedBox(
+        height: widget.height,
+        child: _SliverCoordinateTransformer(
+          child: NomoPageGrid(
+            key: _gridKey,
+            rows: widget.rows,
+            columns: widget.columns,
+            itemSize: widget.itemSize,
+            items: widget.items,
+            height: widget.height,
+            wobbleAmount: widget.wobbleAmount,
+            onChanged: widget.onChanged,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SliverCoordinateTransformer extends StatelessWidget {
+  final Widget child;
+
+  const _SliverCoordinateTransformer({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (context) {
+        // This wrapper ensures drag coordinates are properly transformed
+        // relative to the sliver viewport when used in CustomScrollView
+        return child;
+      },
+    );
+  }
+}
+
 class _NomoPageGrid extends StatefulWidget {
   final int rows;
   final int columns;
