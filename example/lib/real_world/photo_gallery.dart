@@ -21,27 +21,38 @@ class _PhotoGalleryExampleState extends State<PhotoGalleryExample> {
   }
 
   Map<int, Widget> _generatePhotos() {
-    final photoData = [
-      (Icons.landscape, 'Mountains', Colors.green),
-      (Icons.beach_access, 'Beach', Colors.blue),
-      (Icons.location_city, 'City', Colors.grey),
-      (Icons.park, 'Forest', Colors.lightGreen),
-      (Icons.nightlight, 'Night Sky', Colors.indigo),
-      (Icons.wb_sunny, 'Sunset', Colors.orange),
-      (Icons.water, 'Ocean', Colors.cyan),
-      (Icons.terrain, 'Desert', Colors.amber),
-      (Icons.ac_unit, 'Snow', Colors.lightBlue),
-      (Icons.local_florist, 'Flowers', Colors.pink),
-      (Icons.pets, 'Wildlife', Colors.brown),
-      (Icons.architecture, 'Buildings', Colors.blueGrey),
+    final categories = [
+      'mountains',
+      'beach',
+      'city',
+      'forest',
+      'night',
+      'sunset',
+      'ocean',
+      'desert',
+      'snow',
+      'flowers',
+      'wildlife',
+      'architecture',
+      'food',
+      'people',
+      'technology',
+      'abstract',
+      'nature',
+      'travel',
+      'animals',
+      'sports',
+      'fashion',
+      'art',
+      'music',
+      'vintage',
     ];
 
     return {
-      for (int i = 0; i < photoData.length; i++)
+      for (int i = 0; i < categories.length; i++)
         i: _PhotoItem(
-          icon: photoData[i].$1,
-          label: photoData[i].$2,
-          color: photoData[i].$3,
+          index: i,
+          category: categories[i],
           isSelected: selectedPhotos.contains(i),
           onTap: isSelectionMode ? () => _toggleSelection(i) : null,
           onLongPress: () => _startSelection(i),
@@ -242,17 +253,15 @@ class _PhotoGalleryExampleState extends State<PhotoGalleryExample> {
 }
 
 class _PhotoItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
+  final int index;
+  final String category;
   final bool isSelected;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   const _PhotoItem({
-    required this.icon,
-    required this.label,
-    required this.color,
+    required this.index,
+    required this.category,
     required this.isSelected,
     this.onTap,
     this.onLongPress,
@@ -267,49 +276,76 @@ class _PhotoItem extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
                 width: 3,
               ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 48,
-                  color: color,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: color.withValues(alpha: 0.8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(isSelected ? 9 : 12),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    'https://picsum.photos/seed/$category-$index/400/400',
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.image_not_supported,
+                              size: 48,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              category,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                ),
-              ],
-            ),
-          ),
-          if (isSelected)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  size: 20,
-                ),
+                  if (isSelected)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
+          ),
         ],
       ),
     );

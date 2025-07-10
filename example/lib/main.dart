@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'basic/simple_grid.dart';
-import 'basic/custom_items.dart';
 import 'basic/empty_slots.dart';
 import 'advanced/controller_usage.dart';
 import 'advanced/drag_callbacks.dart';
 import 'advanced/multi_page.dart';
-import 'advanced/animations.dart';
-import 'customization/theming.dart';
-import 'customization/sizes.dart';
-import 'customization/indicators.dart';
+import 'customization/playground.dart';
 import 'real_world/photo_gallery.dart';
 import 'real_world/app_launcher.dart';
 import 'real_world/dashboard.dart';
@@ -57,12 +53,6 @@ class ExampleCatalog extends StatelessWidget {
                 builder: () => const SimpleGridExample(),
               ),
               _ExampleTile(
-                title: 'Custom Items',
-                subtitle: 'Grid with custom widget items',
-                icon: Icons.widgets,
-                builder: () => const CustomItemsExample(),
-              ),
-              _ExampleTile(
                 title: 'Empty Slots',
                 subtitle: 'Handling grids with empty positions',
                 icon: Icons.grid_off,
@@ -93,12 +83,6 @@ class ExampleCatalog extends StatelessWidget {
                 icon: Icons.view_carousel,
                 builder: () => const MultiPageExample(),
               ),
-              _ExampleTile(
-                title: 'Animations',
-                subtitle: 'Custom wobble and visual effects',
-                icon: Icons.animation,
-                builder: () => const AnimationsExample(),
-              ),
             ],
           ),
           _buildSection(
@@ -107,22 +91,10 @@ class ExampleCatalog extends StatelessWidget {
             'Style and configure your grids',
             [
               _ExampleTile(
-                title: 'Theming',
-                subtitle: 'Different color schemes and themes',
-                icon: Icons.palette,
-                builder: () => const ThemingExample(),
-              ),
-              _ExampleTile(
-                title: 'Sizes',
-                subtitle: 'Various grid dimensions and layouts',
-                icon: Icons.aspect_ratio,
-                builder: () => const SizesExample(),
-              ),
-              _ExampleTile(
-                title: 'Indicators',
-                subtitle: 'Custom page indicators and controls',
-                icon: Icons.radio_button_checked,
-                builder: () => const IndicatorsExample(),
+                title: 'Playground',
+                subtitle: 'Interactive grid configuration with animations, sizes, and indicators',
+                icon: Icons.tune,
+                builder: () => const PlaygroundExample(),
               ),
             ],
           ),
