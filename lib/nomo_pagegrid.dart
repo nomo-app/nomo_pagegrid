@@ -1022,11 +1022,20 @@ final class PageGridNotifier {
       final newIndex = entry.value;
       final oldPage = index ~/ childrenPerPage;
       final newPage = newIndex ~/ childrenPerPage;
-      assert(oldPage == newPage);
+      // Removed assertion - now supports cross-page displacement
       final oldCoords = getCoords(index, oldPage);
       final newCoords = getCoords(newIndex, newPage);
-      final deltaCol = newCoords.x - oldCoords.x;
-      final deltaRow = newCoords.y - oldCoords.y;
+      
+      // Calculate coordinate deltas including page offset
+      var deltaCol = newCoords.x - oldCoords.x;
+      var deltaRow = newCoords.y - oldCoords.y;
+      
+      // Add page offset when moving across pages
+      if (oldPage != newPage) {
+        final pageDelta = newPage - oldPage;
+        // When moving to next/previous page, items need to account for page width
+        deltaCol += pageDelta * columns;
+      }
       Offset? wobbleDirection;
       // Normalize the direction
       if (deltaCol != 0 || deltaRow != 0) {
@@ -1155,11 +1164,10 @@ final class PageGridNotifier {
       return {oldPosition: newPosition, newPosition: oldPosition};
     }
 
-    final page = newPosition ~/ childrenPerPage;
-
     final pushResult = <int, int>{};
     for (final indexToMove in bestPush.reversed) {
-      final targetIndex = _getIndexInDirection(indexToMove, direction, page);
+      final currentPage = indexToMove ~/ childrenPerPage;
+      final targetIndex = _getIndexInDirection(indexToMove, direction, currentPage);
       if (targetIndex != -1) {
         pushResult[indexToMove] = targetIndex;
       }
@@ -1170,11 +1178,16 @@ final class PageGridNotifier {
   }
 
   List<int>? _getPushChain(int startIndex, int draggedIndex, PushDirection direction) {
-    final page = startIndex ~/ childrenPerPage;
     final chain = <int>[];
     var currentIndex = startIndex;
+    
+    // Allow push chains to cross page boundaries
+    const maxChainLength = 50; // Prevent infinite loops
+    var iterations = 0;
 
-    while (true) {
+    while (iterations < maxChainLength) {
+      iterations++;
+      
       final val = notifierMap[currentIndex]?.value;
       if (val is EmptyPageSpot || currentIndex == draggedIndex) {
         // Found an empty spot, the push is possible.
@@ -1183,13 +1196,21 @@ final class PageGridNotifier {
 
       chain.add(currentIndex);
 
-      final nextIndex = _getIndexInDirection(currentIndex, direction, page);
+      final currentPage = currentIndex ~/ childrenPerPage;
+      var nextIndex = _getIndexInDirection(currentIndex, direction, currentPage);
+      
+      // If we hit page edge, check if we can continue to next/previous page
       if (nextIndex == -1) {
-        // Reached the edge of the grid, push is not possible in this direction.
-        return null;
+        nextIndex = _getCrossPageIndex(currentIndex, direction);
+        if (nextIndex == -1) {
+          // Can't cross to another page, push is not possible
+          return null;
+        }
       }
+      
       currentIndex = nextIndex;
     }
+    
     return chain;
   }
 
@@ -1216,6 +1237,53 @@ final class PageGridNotifier {
 
     final pageStartIndex = page * childrenPerPage;
     return pageStartIndex + newRow * columns + newCol;
+  }
+  
+  int _getCrossPageIndex(int fromIndex, PushDirection direction) {
+    final currentPage = fromIndex ~/ childrenPerPage;
+    final coords = getCoords(fromIndex, currentPage);
+    
+    // Check if we're at a page edge and can cross to next/previous page
+    final newCol = coords.x + direction.x;
+    final newRow = coords.y + direction.y;
+    
+    // Moving right from rightmost column to next page
+    if (newCol >= columns && direction.x > 0) {
+      final nextPage = currentPage + 1;
+      if (nextPage * childrenPerPage < notifierMap.length) {
+        // Move to leftmost column of same row on next page
+        return nextPage * childrenPerPage + coords.y * columns;
+      }
+    }
+    
+    // Moving left from leftmost column to previous page  
+    if (newCol < 0 && direction.x < 0) {
+      final prevPage = currentPage - 1;
+      if (prevPage >= 0) {
+        // Move to rightmost column of same row on previous page
+        return prevPage * childrenPerPage + coords.y * columns + (columns - 1);
+      }
+    }
+    
+    // Moving down from bottom row to next page
+    if (newRow >= rows && direction.y > 0) {
+      final nextPage = currentPage + 1;
+      if (nextPage * childrenPerPage < notifierMap.length) {
+        // Move to top row of same column on next page
+        return nextPage * childrenPerPage + coords.x;
+      }
+    }
+    
+    // Moving up from top row to previous page
+    if (newRow < 0 && direction.y < 0) {
+      final prevPage = currentPage - 1;
+      if (prevPage >= 0) {
+        // Move to bottom row of same column on previous page
+        return prevPage * childrenPerPage + (rows - 1) * columns + coords.x;
+      }
+    }
+    
+    return -1;
   }
 
   void _startEdgeNavigation(EdgeNavigationState edge) {
