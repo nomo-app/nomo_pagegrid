@@ -1022,11 +1022,20 @@ final class PageGridNotifier {
       final newIndex = entry.value;
       final oldPage = index ~/ childrenPerPage;
       final newPage = newIndex ~/ childrenPerPage;
-      assert(oldPage == newPage);
+      // Removed assertion - now supports cross-page displacement
       final oldCoords = getCoords(index, oldPage);
       final newCoords = getCoords(newIndex, newPage);
-      final deltaCol = newCoords.x - oldCoords.x;
-      final deltaRow = newCoords.y - oldCoords.y;
+      
+      // Calculate coordinate deltas including page offset
+      var deltaCol = newCoords.x - oldCoords.x;
+      var deltaRow = newCoords.y - oldCoords.y;
+      
+      // Add page offset when moving across pages
+      if (oldPage != newPage) {
+        final pageDelta = newPage - oldPage;
+        // When moving to next/previous page, items need to account for page width
+        deltaCol += pageDelta * columns;
+      }
       Offset? wobbleDirection;
       // Normalize the direction
       if (deltaCol != 0 || deltaRow != 0) {
