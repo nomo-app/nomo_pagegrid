@@ -45,6 +45,48 @@ class NomoPageGrid extends StatelessWidget {
   }
 }
 
+class SliverNomoPageGrid extends StatelessWidget {
+  final int rows;
+  final int columns;
+  final Size itemSize;
+  final double? height;
+  final double wobbleAmount;
+  final Map<int, Widget> items;
+  final void Function(Map<int, Widget> newItems)? onChanged;
+
+  const SliverNomoPageGrid({
+    super.key,
+    required this.rows,
+    required this.columns,
+    required this.itemSize,
+    required this.items,
+    this.height,
+    this.wobbleAmount = 3,
+    this.onChanged,
+  })  : assert(
+          height != null && height > 0,
+          'SliverNomoPageGrid requires a positive height value',
+        );
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: height,
+        child: NomoPageGrid(
+          rows: rows,
+          columns: columns,
+          itemSize: itemSize,
+          items: items,
+          height: height,
+          wobbleAmount: wobbleAmount,
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
 class _NomoPageGrid extends StatefulWidget {
   final int rows;
   final int columns;
