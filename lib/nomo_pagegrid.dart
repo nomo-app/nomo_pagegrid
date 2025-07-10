@@ -840,7 +840,8 @@ final class PageGridNotifier {
     if (newPosition == oldPosition) return;
 
     // Use the stored push result from preview to ensure consistency
-
+    // Check if we're using the cached chain or calculating fresh
+    final bool usingCachedChain = _lastPushResult != null;
     final pushResult =
         _lastPushResult ??
         _calculatePush(
@@ -852,6 +853,11 @@ final class PageGridNotifier {
     if (pushResult == null) {
       return;
     }
+
+    // Determine if we should skip animations
+    // When chains match (using cached), items are already in preview positions
+    // When chains differ (fresh calculation), items need to animate to new positions
+    final bool chainsMatch = usingCachedChain;
 
     // Clear displacement preview immediately to prevent dragged item from animating
     clearDisplacementPreview();
@@ -866,12 +872,12 @@ final class PageGridNotifier {
         pushResult[newPosition] == oldPosition) {
       final itemAtNewPosition = notifierMap[newPosition]!.value;
 
-      // Mark both items as dropping to prevent animation
+      // Mark both items as dropping conditionally based on chain match
       if (draggedItem is ItemPageSpot) {
-        notifierMap[newPosition]!.value = ItemPageSpot(draggedItem.item, isDropping: true);
+        notifierMap[newPosition]!.value = ItemPageSpot(draggedItem.item, isDropping: chainsMatch);
       }
       if (itemAtNewPosition is ItemPageSpot) {
-        notifierMap[oldPosition]!.value = ItemPageSpot(itemAtNewPosition.item, isDropping: true);
+        notifierMap[oldPosition]!.value = ItemPageSpot(itemAtNewPosition.item, isDropping: chainsMatch);
       }
 
       onItemsChanged();
@@ -911,7 +917,7 @@ final class PageGridNotifier {
         // Don't move the dragged item yet
         final itemToMove = itemsToMove[fromIndex]!;
         if (itemToMove is ItemPageSpot) {
-          notifierMap[toIndex]!.value = ItemPageSpot(itemToMove.item, isDropping: true);
+          notifierMap[toIndex]!.value = ItemPageSpot(itemToMove.item, isDropping: chainsMatch);
           affectedIndices.add(toIndex);
         } else {
           notifierMap[toIndex]!.value = itemToMove;
@@ -919,9 +925,9 @@ final class PageGridNotifier {
       }
     }
 
-    // Place the dragged item at target position with isDropping flag
+    // Place the dragged item at target position with conditional isDropping flag
     if (draggedItem is ItemPageSpot) {
-      notifierMap[newPosition]!.value = ItemPageSpot(draggedItem.item, isDropping: true);
+      notifierMap[newPosition]!.value = ItemPageSpot(draggedItem.item, isDropping: chainsMatch);
       affectedIndices.add(newPosition);
     } else {
       notifierMap[newPosition]!.value = draggedItem;
