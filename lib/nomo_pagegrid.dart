@@ -71,16 +71,83 @@ class SliverNomoPageGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverToBoxAdapter(
+      child: _SliverNomoPageGridContent(
+        rows: rows,
+        columns: columns,
+        itemSize: itemSize,
+        height: height!,
+        wobbleAmount: wobbleAmount,
+        items: items,
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _SliverNomoPageGridContent extends StatefulWidget {
+  final int rows;
+  final int columns;
+  final Size itemSize;
+  final double height;
+  final double wobbleAmount;
+  final Map<int, Widget> items;
+  final void Function(Map<int, Widget> newItems)? onChanged;
+
+  const _SliverNomoPageGridContent({
+    required this.rows,
+    required this.columns,
+    required this.itemSize,
+    required this.height,
+    required this.wobbleAmount,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  State<_SliverNomoPageGridContent> createState() => _SliverNomoPageGridContentState();
+}
+
+class _SliverNomoPageGridContentState extends State<_SliverNomoPageGridContent> {
+  ScrollDirection _lastScrollDirection = ScrollDirection.idle;
+  bool _isHorizontalScrollActive = false;
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification) {
+      final details = notification.dragDetails;
+      if (details != null) {
+        final dx = details.delta.dx.abs();
+        final dy = details.delta.dy.abs();
+        
+        if (dx > dy * 2) {
+          _isHorizontalScrollActive = true;
+        } else {
+          _isHorizontalScrollActive = false;
+        }
+      }
+    } else if (notification is ScrollEndNotification) {
+      _isHorizontalScrollActive = false;
+      _lastScrollDirection = ScrollDirection.idle;
+    } else if (notification is UserScrollNotification) {
+      _lastScrollDirection = notification.direction;
+    }
+    
+    return _isHorizontalScrollActive;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: _handleScrollNotification,
       child: SizedBox(
-        height: height,
+        height: widget.height,
         child: NomoPageGrid(
-          rows: rows,
-          columns: columns,
-          itemSize: itemSize,
-          items: items,
-          height: height,
-          wobbleAmount: wobbleAmount,
-          onChanged: onChanged,
+          rows: widget.rows,
+          columns: widget.columns,
+          itemSize: widget.itemSize,
+          items: widget.items,
+          height: widget.height,
+          wobbleAmount: widget.wobbleAmount,
+          onChanged: widget.onChanged,
         ),
       ),
     );
