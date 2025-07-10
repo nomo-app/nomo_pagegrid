@@ -155,5 +155,4 @@ windows/
 web/
 macos/
 
-
-.claude/
+features/
