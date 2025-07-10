@@ -762,6 +762,7 @@ DirectionCompatibility getDirectionCompatibility(
 
 typedef Position = ({int x, int y});
 
+/// Manages the state and logic for the page grid widget
 final class PageGridNotifier {
   final int rows;
   final int columns;
