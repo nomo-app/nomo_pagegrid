@@ -15,8 +15,19 @@ Follow these steps to implement the feature based on the issue specification:
    - Confirm we're in the correct worktree with `git status`
    - Get the current branch name to verify we're on the feature branch
    - Note: This command should be run from within the worktree created by the architect command
+  
+3. **Create Pull Request**
+   - Use `gh pr create` to create a pull request early in the process
+   - Link the PR to the original issue with "Closes #ISSUE_NUMBER"
+   - Title format: "Implement [feature name]"
+   - Body should include:
+     - Summary of the feature being implemented
+     - Link to close the issue
+     - Implementation checklist (to be updated as work progresses)
+   - Display the created pull request URL in the console
+   - This allows tracking progress and early visibility
 
-3. **Review Implementation Plan**
+4. **Review Implementation Plan**
    - If `--no-confirm` is NOT used:
      - Present the extracted implementation tasks to the user
      - Ask for clarification on any ambiguous requirements
@@ -26,7 +37,7 @@ Follow these steps to implement the feature based on the issue specification:
      - Log the implementation plan for reference
      - Proceed automatically with best judgment
 
-4. **Interactive Implementation**
+5. **Interactive Implementation**
    - If `--no-confirm` is NOT used:
      - For each major component or task:
        - Explain what you're about to implement
@@ -38,21 +49,21 @@ Follow these steps to implement the feature based on the issue specification:
      - Log progress as you go
      - Make reasonable decisions based on existing patterns
 
-5. **Code Implementation**
+6. **Code Implementation**
    - Implement features incrementally, one component at a time
    - Follow existing code patterns and conventions
    - Use appropriate design patterns from the specification
    - Ensure proper error handling and edge cases
    - **Stage changes after each component/subtask is complete**
 
-6. **Code Quality**
+7. **Code Quality**
    - Run linting and formatting tools after each component
    - Fix any linting errors immediately
    - Ensure code follows project style guidelines
    - Run type checking if available
    - **Stage all changes for the current subtask**
 
-7. **Review and Commit**
+8. **Review and Commit**
    - After implementing and staging changes for a subtask:
    - Use `git status` to show staged files
    - Use `git diff --staged` to show staged changes
@@ -69,34 +80,29 @@ Follow these steps to implement the feature based on the issue specification:
      - "feat: add drag-drop coordinate handling (#ISSUE_NUMBER)"
      - "docs: update README with SliverNomoPageGrid usage (#ISSUE_NUMBER)"
 
-8. **Integration**
+9. **Integration**
    - Integrate new components with existing code
    - Update any necessary imports or exports
    - Ensure backward compatibility if required
    - Update example app if specified in issue
    - Stage and review changes as in step 7
 
-9. **Documentation Updates**
+10. **Documentation Updates**
    - Add inline code documentation
    - Update README if new public APIs are added
    - Update CLAUDE.md if new patterns are introduced
    - Add usage examples where appropriate
    - Stage and review changes as in step 7
 
-10. **Final Review**
+11. **Final Review**
     - Show summary of all changes made
     - If `--no-confirm` is NOT used:
       - Ask user to review the implementation
       - Make any requested adjustments
     - Push all commits to the feature branch
-
-11. **Create Pull Request**
-    - Use `gh pr create` to create a pull request
-    - Link the PR to the original issue with "Closes #ISSUE_NUMBER"
-    - Include implementation summary in PR description
+    - Update PR description with final implementation summary
     - List all changes made during implementation
     - Add any notes about design decisions or trade-offs
-    - Request review if appropriate
 
 Important Guidelines:
 - **Prerequisite**: Run this command from within the worktree created by the architect command
@@ -117,6 +123,11 @@ Example Interaction (Normal Mode):
 ```
 Claude: Verifying environment...
 ✓ Currently in worktree for branch: feature/sliver-nomo-pagegrid
+
+Creating pull request to track implementation progress...
+✓ Pull request created: https://github.com/org/repo/pull/124
+  Title: Implement SliverNomoPageGrid feature
+  Closes: #123
 
 I've analyzed issue #123. The specification requires:
 1. Basic SliverNomoPageGrid wrapper
@@ -151,17 +162,21 @@ Claude: ✓ Committed: "feat: implement scroll coordination for SliverNomoPageGr
 
 [After all implementation is complete]
 
-Claude: All implementation tasks are complete. Creating pull request...
+Claude: All implementation tasks are complete. Pushing final changes to the pull request...
 
-✓ Pull request created: #124
-  Title: Implement SliverNomoPageGrid feature
-  Closes: #123
+✓ All changes pushed to feature/sliver-nomo-pagegrid
+✓ Pull request #124 updated with implementation summary
 ```
 
 Example Interaction (With --no-confirm):
 ```
 Claude: Verifying environment...
 ✓ Currently in worktree for branch: feature/sliver-nomo-pagegrid
+
+Creating pull request to track implementation progress...
+✓ Pull request created: https://github.com/org/repo/pull/124
+  Title: Implement SliverNomoPageGrid feature
+  Closes: #123
 
 I've analyzed issue #123. The specification requires:
 1. Basic SliverNomoPageGrid wrapper
@@ -183,19 +198,19 @@ Starting implementation based on specification...
 ✓ Committed: "feat: add drag-drop coordinate handling (#123)"
 
 ✓ Pushed all changes to feature/sliver-nomo-pagegrid
+✓ Pull request #124 updated with implementation summary
 
-✓ Pull request created: #124
-  Title: Implement SliverNomoPageGrid feature
-  Closes: #123
-
-Implementation complete. PR #124 has been created and linked to issue #123.
+Implementation complete. PR #124 is ready for review.
 ```
 
 Workflow Summary:
 1. **Architect command** creates the feature specification, issue, and worktree
 2. **Launch Claude** in the worktree: `cd ./features/project-issue-123 && claude`
-3. **Implement command** executes the implementation based on the issue spec
-4. **Pull request** is created automatically at the end to close the issue
+3. **Implement command** executes the implementation:
+   - Creates PR immediately after environment verification
+   - Implements features incrementally with commits
+   - Updates PR with progress throughout implementation
+4. **Pull request** is ready for review when implementation completes
 
 Remember:
 - This command must be run from within a worktree
