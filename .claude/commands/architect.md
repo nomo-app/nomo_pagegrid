@@ -36,7 +36,8 @@ Follow these steps to create a comprehensive architectural design:
    - Include all architectural decisions and rationale
    - Add implementation tasks as a checklist
    - Include test plan and acceptance criteria
-   - Note the issue number for reference
+   - Note the issue number and URL for reference
+   - Print the issue URL to console for easy access
 
 7. **Create Feature Branch**
    - Generate appropriate branch name (e.g., feature/component-name)
@@ -87,6 +88,7 @@ Final Output:
 ```
 ✓ Feature specification created
 ✓ Issue created: #456
+✓ Issue URL: https://github.com/YOUR_ORG/YOUR_REPO/issues/456
 ✓ Branch created: feature/component-name
 ✓ Branch pushed to origin
 ✓ Worktree created at: ./features/project-issue-456

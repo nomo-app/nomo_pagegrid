@@ -9,18 +9,156 @@ import 'src/page_grid_controller.dart';
 import 'src/page_grid_controller_state.dart';
 export 'src/page_grid_controller.dart';
 
-enum EdgeNavigationState { left, right }
+/// Represents the edge navigation state for page transitions.
+///
+/// Used internally to indicate which edge (left or right) is being navigated
+/// when transitioning between pages in the grid.
+enum EdgeNavigationState {
+  /// Navigation from the left edge
+  left,
 
+  /// Navigation from the right edge
+  right,
+}
+
+/// A customizable grid widget with drag-and-drop functionality and page-based navigation.
+///
+/// [NomoPageGrid] creates a grid layout where items can be dragged and reordered
+/// by long-pressing and dragging them to new positions. The grid supports multiple
+/// pages that users can navigate between by swiping horizontally.
+///
+/// ## Features:
+/// - **Drag and Drop**: Long-press any item to drag it to a new position
+/// - **Smart Displacement**: Items automatically move out of the way when dragging
+/// - **Page Navigation**: Swipe left/right to navigate between pages
+/// - **Customizable Layout**: Configure rows, columns, and item sizes
+/// - **Empty Slots**: Supports grids with empty positions
+/// - **Controller Support**: Use [PageGridController] for programmatic control
+///
+/// ## Basic Usage:
+/// ```dart
+/// NomoPageGrid(
+///   rows: 3,
+///   columns: 3,
+///   itemSize: Size(64, 64),
+///   items: {
+///     0: Container(color: Colors.red),
+///     1: Container(color: Colors.blue),
+///     2: Container(color: Colors.green),
+///   },
+///   onChanged: (newItems) {
+///     setState(() => items = newItems);
+///   },
+/// )
+/// ```
+///
+/// ## With Controller:
+/// ```dart
+/// final controller = PageGridController();
+///
+/// NomoPageGrid(
+///   controller: controller,
+///   rows: 4,
+///   columns: 4,
+///   itemSize: Size(80, 80),
+///   items: items,
+///   onChanged: (newItems) => setState(() => items = newItems),
+/// )
+///
+/// // Navigate programmatically
+/// controller.nextPage();
+/// controller.previousPage();
+/// controller.animateToPage(2);
+/// ```
+///
+/// The widget automatically calculates the number of pages based on the total
+/// number of items and the grid dimensions (rows × columns per page).
 class NomoPageGrid extends StatelessWidget {
+  /// Number of rows in the grid per page.
+  ///
+  /// Must be a positive integer. Together with [columns], this determines
+  /// how many items can fit on a single page.
   final int rows;
+
+  /// Number of columns in the grid per page.
+  ///
+  /// Must be a positive integer. Together with [rows], this determines
+  /// how many items can fit on a single page.
   final int columns;
+
+  /// The size of each grid item.
+  ///
+  /// All items in the grid will have this exact size. The total grid size
+  /// is calculated based on this size multiplied by the number of rows/columns.
   final Size itemSize;
+
+  /// Optional fixed width for the grid.
+  ///
+  /// If not specified, the grid will use the maximum available width from
+  /// its parent constraints. Useful for centering the grid or limiting its width.
   final double? width;
+
+  /// Optional fixed height for the grid.
+  ///
+  /// If not specified, the grid will use the maximum available height from
+  /// its parent constraints. When placed in an unbounded height context
+  /// (e.g., inside a Column), the grid will automatically calculate its
+  /// height based on the number of rows, item size, and cross-axis spacing:
+  /// `height = rows * itemSize.height + (rows - 1) * crossAxisSpacing`
+  /// 
+  /// For more control, you can:
+  /// - Provide an explicit height value
+  /// - Wrap the grid in a SizedBox with a specific height
+  /// - Use Expanded when inside a Column or Flex widget
   final double? height;
+
+  /// The amount of wobble effect applied to displaced items.
+  ///
+  /// When an item is displaced by dragging another item, it will wobble
+  /// with this amplitude (in logical pixels). Defaults to 3.0.
+  /// Set to 0 to disable the wobble effect.
   final double wobbleAmount;
+
+  /// Map of items to display in the grid.
+  ///
+  /// The key represents the position index (0-based) and the value is the
+  /// widget to display at that position. Empty positions (missing keys) will
+  /// show as empty slots in the grid.
+  ///
+  /// Position indices are calculated as: `index = page * (rows * columns) + row * columns + column`
   final Map<int, Widget> items;
+
+  /// Callback invoked when items are reordered through drag-and-drop.
+  ///
+  /// The callback receives the new item arrangement as a Map where keys
+  /// are position indices and values are the widgets. You should update
+  /// your state with these new positions to persist the changes.
+  ///
+  /// Example:
+  /// ```dart
+  /// onChanged: (newItems) {
+  ///   setState(() => items = newItems);
+  /// }
+  /// ```
   final void Function(Map<int, Widget> newItems)? onChanged;
+
+  /// Optional controller for programmatic page navigation.
+  ///
+  /// Use [PageGridController] to navigate between pages programmatically,
+  /// get the current page, or listen to page changes.
+  ///
+  /// See [PageGridController] for more details.
   final PageGridController? controller;
+  
+  /// The spacing between items along the main axis (horizontal).
+  ///
+  /// Defaults to 0.0. This adds space between columns in the grid.
+  final double mainAxisSpacing;
+  
+  /// The spacing between items along the cross axis (vertical).
+  ///
+  /// Defaults to 0.0. This adds space between rows in the grid.
+  final double crossAxisSpacing;
 
   const NomoPageGrid({
     super.key,
@@ -33,22 +171,44 @@ class NomoPageGrid extends StatelessWidget {
     this.wobbleAmount = 3,
     this.onChanged,
     this.controller,
+    this.mainAxisSpacing = 0.0,
+    this.crossAxisSpacing = 0.0,
   });
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Calculate the required height based on grid configuration with spacing
+        final calculatedHeight = rows * itemSize.height + 
+                                (rows > 1 ? (rows - 1) * crossAxisSpacing : 0);
+        
+        // Calculate the required width based on grid configuration with spacing
+        final calculatedWidth = columns * itemSize.width + 
+                               (columns > 1 ? (columns - 1) * mainAxisSpacing : 0);
+        
+        // Determine the appropriate height to use
+        final effectiveHeight = height ?? (constraints.maxHeight.isFinite 
+            ? constraints.maxHeight 
+            : calculatedHeight);
+            
+        // Determine the appropriate width to use
+        final effectiveWidth = width ?? (constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : calculatedWidth);
+        
         return _NomoPageGrid(
           rows: rows,
           columns: columns,
           itemSize: itemSize,
           items: items,
-          width: width ?? constraints.maxWidth,
-          height: height ?? constraints.maxHeight,
+          width: effectiveWidth,
+          height: effectiveHeight,
           wobbleAmount: wobbleAmount,
           onChanged: onChanged,
           controller: controller,
+          mainAxisSpacing: mainAxisSpacing,
+          crossAxisSpacing: crossAxisSpacing,
         );
       },
     );
@@ -241,6 +401,9 @@ class _NomoPageGrid extends StatefulWidget {
   final Map<int, Widget> items;
   final void Function(Map<int, Widget> newItems)? onChanged;
   final PageGridController? controller;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
+  
   _NomoPageGrid({
     required this.rows,
     required this.columns,
@@ -251,8 +414,20 @@ class _NomoPageGrid extends StatefulWidget {
     required this.height,
     required this.onChanged,
     this.controller,
-  }) : assert(height.isFinite && !height.isNegative, ""),
-       assert(width.isFinite && !width.isNegative, "");
+    required this.mainAxisSpacing,
+    required this.crossAxisSpacing,
+  }) : assert(
+          height.isFinite && height > 0,
+          'NomoPageGrid requires a finite positive height. '
+          'Either provide an explicit height parameter or ensure the widget '
+          'is placed in a container with bounded height constraints.',
+        ),
+        assert(
+          width.isFinite && width > 0,
+          'NomoPageGrid requires a finite positive width. '
+          'Either provide an explicit width parameter or ensure the widget '
+          'is placed in a container with bounded width constraints.',
+        );
 
   @override
   State<_NomoPageGrid> createState() => _NomoPageGridState();
@@ -270,6 +445,8 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
     itemSize: widget.itemSize,
     wobbleAmount: widget.wobbleAmount,
     onChanged: widget.onChanged,
+    mainAxisSpacing: widget.mainAxisSpacing,
+    crossAxisSpacing: widget.crossAxisSpacing,
   );
 
   @override
@@ -315,27 +492,36 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      key: _stackKey,
-      children: [
-        ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(
-            dragDevices: {
-              PointerDeviceKind.mouse,
-              PointerDeviceKind.touch,
-            },
-          ),
-          child: ValueListenableBuilder(
-            valueListenable: pageGridNotifier.pageCountNotifier,
-            builder: (context, pageCount, child) {
-              return GridView.builder(
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: widget.height,
+        maxHeight: widget.height,
+        minWidth: widget.width,
+        maxWidth: widget.width,
+      ),
+      child: Stack(
+        key: _stackKey,
+        children: [
+          ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.touch,
+              },
+            ),
+            child: ValueListenableBuilder(
+              valueListenable: pageGridNotifier.pageCountNotifier,
+              builder: (context, pageCount, child) {
+                return GridView.builder(
                 physics: PageScrollPhysics(),
                 scrollDirection: Axis.horizontal,
                 controller: pageGridNotifier.controller,
                 gridDelegate: NomoPageGridDelegate(
                   rows: widget.rows,
                   columns: widget.columns,
-                  itemSize: 64,
+                  itemSize: widget.itemSize.width,  // Use actual item width
+                  mainAxisSpacing: widget.mainAxisSpacing,
+                  crossAxisSpacing: widget.crossAxisSpacing,
                 ),
                 dragStartBehavior: DragStartBehavior.down,
 
@@ -370,7 +556,7 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
               final currentPage = pageGridNotifier.pageNotifier.value;
               final totalPages = pageGridNotifier.pageCountNotifier.value;
               final isLastPage = currentPage >= totalPages - 1;
-              
+
               if (isLastPage) {
                 return SizedBox.shrink();
               }
@@ -420,6 +606,7 @@ class _NomoPageGridState extends State<_NomoPageGrid> implements PageGridControl
           ),
         ),
       ],
+    ),
     );
   }
 }
@@ -430,6 +617,8 @@ class NomoPageGridLayout extends SliverGridLayout {
   final double crossAxisExtent;
   final double mainAxisExtent;
   final double maxItemSize;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
 
   late final double itemWidth;
   late final double itemHeight;
@@ -440,9 +629,16 @@ class NomoPageGridLayout extends SliverGridLayout {
     required this.columns,
     required this.crossAxisExtent,
     required this.mainAxisExtent,
+    required this.mainAxisSpacing,
+    required this.crossAxisSpacing,
   }) {
-    itemWidth = mainAxisExtent / columns;
-    itemHeight = crossAxisExtent / rows;
+    // Calculate item dimensions accounting for spacing
+    itemWidth = columns > 1 
+        ? (mainAxisExtent - (columns - 1) * mainAxisSpacing) / columns
+        : mainAxisExtent;
+    itemHeight = rows > 1
+        ? (crossAxisExtent - (rows - 1) * crossAxisSpacing) / rows
+        : crossAxisExtent;
   }
 
   @override
@@ -468,9 +664,9 @@ class NomoPageGridLayout extends SliverGridLayout {
     final int row = pageIndex ~/ columns;
     final int col = pageIndex % columns;
 
-    double mainAxisOffset = col * itemWidth + page * mainAxisExtent;
-
-    final double crossAxisOffset = row * itemHeight;
+    // Calculate position with spacing
+    double mainAxisOffset = col * (itemWidth + mainAxisSpacing) + page * mainAxisExtent;
+    final double crossAxisOffset = row * (itemHeight + crossAxisSpacing);
 
     return SliverGridGeometry(
       scrollOffset: mainAxisOffset,
@@ -513,6 +709,8 @@ class NomoPageGridDelegate extends SliverGridDelegate {
       maxItemSize: itemSize,
       crossAxisExtent: constraints.crossAxisExtent,
       mainAxisExtent: constraints.viewportMainAxisExtent,
+      mainAxisSpacing: mainAxisSpacing,
+      crossAxisSpacing: crossAxisSpacing,
     );
   }
 
@@ -780,6 +978,8 @@ final class PageGridNotifier {
   final double viewportWidth;
   final double viewportHeight;
   final double wobbleAmount;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
 
   int get childrenPerPage => rows * columns;
   double get targetWidth => viewportWidth / columns;
@@ -822,13 +1022,17 @@ final class PageGridNotifier {
     required this.itemSize,
     required this.wobbleAmount,
     required this.onChanged,
+    required this.mainAxisSpacing,
+    required this.crossAxisSpacing,
   }) {
-    final maxIndex = initalItems.keys.reduce(
-      (value, element) {
-        return max(value, element);
-      },
-    );
-    final pages = (maxIndex / childrenPerPage).ceil();
+    final maxIndex = initalItems.isEmpty
+        ? 0
+        : initalItems.keys.reduce(
+            (value, element) {
+              return max(value, element);
+            },
+          );
+    final pages = maxIndex == 0 ? 1 : (maxIndex / childrenPerPage).ceil();
     pageCountNotifier = ValueNotifier(pages);
 
     controller.addListener(onScrollPositionChanged);
@@ -838,7 +1042,7 @@ final class PageGridNotifier {
 
   Timer? _edgeNavigationTimer;
   EdgeNavigationState? _currentEdgeState;
-  
+
   static const Duration _initialNavigationDelay = Duration(milliseconds: 600);
   static const Duration _repeatNavigationDelay = Duration(milliseconds: 400);
 
@@ -1229,30 +1433,30 @@ final class PageGridNotifier {
 
   void _startEdgeNavigation(EdgeNavigationState edge) {
     _currentEdgeState = edge;
-    
+
     // Initial navigation after delay
     _edgeNavigationTimer = Timer(_initialNavigationDelay, () {
       _navigateToEdge();
-      
+
       // Setup repeating navigation
       _edgeNavigationTimer = Timer.periodic(_repeatNavigationDelay, (_) {
         _navigateToEdge();
       });
     });
   }
-  
+
   void _stopEdgeNavigation() {
     _edgeNavigationTimer?.cancel();
     _edgeNavigationTimer = null;
     _currentEdgeState = null;
   }
-  
+
   void _navigateToEdge() {
     if (_currentEdgeState == null) return;
-    
+
     final currentPage = pageNotifier.value;
     final maxPage = pageCountNotifier.value - 1;
-    
+
     if (_currentEdgeState == EdgeNavigationState.right && currentPage < maxPage) {
       controller.animateTo(
         controller.offset + viewportWidth,
@@ -1273,17 +1477,17 @@ final class PageGridNotifier {
 
   void onChildDragUpdate(DragUpdateDetails dragUpdate) {
     final globalOffset = dragUpdate.globalPosition;
-    
+
     // Edge detection zones: 32px for activation
     const edgeZone = 32.0;
     // Hysteresis zone: 40px to prevent oscillation
     const hysteresisZone = 40.0;
-    
+
     final isInRightEdge = viewportWidth - globalOffset.dx < edgeZone;
     final isInLeftEdge = globalOffset.dx < edgeZone;
-    final isOutsideHysteresis = globalOffset.dx > hysteresisZone && 
-                                globalOffset.dx < viewportWidth - hysteresisZone;
-    
+    final isOutsideHysteresis =
+        globalOffset.dx > hysteresisZone && globalOffset.dx < viewportWidth - hysteresisZone;
+
     if (isInRightEdge) {
       if (_currentEdgeState != EdgeNavigationState.right) {
         _stopEdgeNavigation();

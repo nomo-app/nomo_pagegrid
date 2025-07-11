@@ -13,7 +13,16 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(flutter analyze:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(gh issue view:*)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter test:*)",
+      "Bash(flutter format:*)",
+      "Bash(dart format:*)",
+      "Bash(gh issue create:*)",
+      "Bash(git branch:*)",
+      "Bash(git restore:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
